@@ -1,0 +1,121 @@
+/* ==========================
+   RESET
+========================== */
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins', sans-serif; }
+
+/* ==========================
+   BACKGROUND
+========================== */
+body {
+    min-height:100vh;
+    background: linear-gradient(135deg,#1f4037,#99f2c8);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+
+/* ==========================
+   CONTAINER
+========================== */
+.container {
+    width:420px;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    padding:35px;
+    border-radius:20px;
+    box-shadow:0 25px 60px rgba(0,0,0,0.4);
+    color:#fff;
+    animation: fadeIn 0.7s ease;
+}
+
+/* ==========================
+   TITLE
+========================== */
+.container h2 {
+    text-align:center;
+    margin-bottom:25px;
+    letter-spacing:1px;
+}
+
+/* ==========================
+   ALERT
+========================== */
+.alert {
+    background: rgba(255,50,50,0.3);
+    padding:10px;
+    margin-bottom:15px;
+    border-radius:8px;
+    text-align:center;
+    color:#fff;
+}
+
+/* ==========================
+   FORM
+========================== */
+label {
+    font-size:14px;
+    font-weight:500;
+}
+
+select,input[type="number"] {
+    width:100%;
+    padding:10px;
+    margin-top:6px;
+    margin-bottom:15px;
+    border-radius:8px;
+    border:none;
+    outline:none;
+    font-size:14px;
+    transition:0.3s;
+}
+
+select:focus,input:focus {
+    box-shadow:0 0 10px #00c6ff;
+    transform: scale(1.02);
+}
+
+/* ==========================
+   BUTTONS
+========================== */
+input[type="submit"],
+.btn-kembali {
+    display:block;
+    width:100%;
+    padding:10px;
+    border-radius:8px;
+    text-align:center;
+    text-decoration:none;
+    font-weight:500;
+    margin-top:10px;
+    transition:0.3s;
+    cursor:pointer;
+}
+
+/* Transfer Button */
+.btn-transfer {
+    background: linear-gradient(135deg,#00c6ff,#0072ff);
+    color:#fff;
+    border:none;
+}
+
+/* Kembali Button */
+.btn-kembali {
+    background: linear-gradient(135deg,#757f9a,#d7dde8);
+    color:#333;
+}
+
+/* Hover */
+.btn-transfer:hover,.btn-kembali:hover {
+    transform: translateY(-3px);
+    box-shadow:0 10px 20px rgba(0,0,0,0.4);
+}
+
+/* ==========================
+   ANIMATION
+========================== */
+@keyframes fadeIn {
+    from {opacity:0; transform:translateY(25px);}
+    to {opacity:1; transform:translateY(0);}
+}
+

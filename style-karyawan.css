@@ -1,0 +1,108 @@
+/* Reset sederhana */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #e9f0f7;
+  color: #333;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.container {
+  background: #fff;
+  width: 100%;
+  max-width: 480px;
+  padding: 30px 40px;
+  border-radius: 15px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+}
+
+h2 {
+  text-align: center;
+  margin-bottom: 25px;
+  color: #0b4a85;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+p {
+  font-size: 1.1rem;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+/* Kotak saldo */
+.saldo-box {
+  background: #0b4a85;
+  color: white;
+  border-radius: 12px;
+  padding: 25px;
+  margin-bottom: 30px;
+  box-shadow: 0 6px 15px rgba(11, 74, 133, 0.3);
+  text-align: center;
+  transition: background 0.3s ease;
+}
+
+.saldo-box:hover {
+  background: #083763;
+}
+
+.saldo-box h3 {
+  font-weight: 600;
+  font-size: 1.25rem;
+  margin-bottom: 10px;
+}
+
+.saldo {
+  font-size: 2.2rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+/* Menu */
+ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+ul li a {
+  display: block;
+  text-decoration: none;
+  background-color: #0b4a85;
+  color: white;
+  padding: 14px 25px;
+  border-radius: 10px;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(11, 74, 133, 0.2);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+ul li a:hover {
+  background-color: #083763;
+  box-shadow: 0 6px 18px rgba(8, 55, 99, 0.4);
+}
+
+/* Responsive */
+@media (max-width: 500px) {
+  .container {
+    padding: 20px 25px;
+  }
+  .saldo {
+    font-size: 1.8rem;
+  }
+  ul li a {
+    padding: 12px 18px;
+  }
+}
+

@@ -1,0 +1,153 @@
+/* =========================
+   RESET
+========================= */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+
+/* =========================
+   BACKGROUND
+========================= */
+body {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #141e30, #243b55);
+  display: flex;
+  justify-content: center;
+  padding: 40px 20px;
+  color: #fff;
+}
+
+/* =========================
+   CONTAINER CARD
+========================= */
+.container {
+  width: 100%;
+  max-width: 1200px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-radius: 20px;
+  padding: 35px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+  animation: fadeIn 0.8s ease;
+}
+
+/* =========================
+   TITLE
+========================= */
+.container h2 {
+  text-align: center;
+  margin-bottom: 25px;
+  font-size: 24px;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+/* =========================
+   BUTTONS
+========================= */
+.btn {
+  display: inline-block;
+  padding: 10px 20px;
+  margin-right: 10px;
+  margin-bottom: 20px;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: 0.3s ease;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #00f2fe, #4facfe);
+  color: #fff;
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, #ff512f, #dd2476);
+  color: #fff;
+}
+
+.btn:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+}
+
+/* =========================
+   TABLE STYLE
+========================= */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  overflow: hidden;
+  border-radius: 15px;
+}
+
+/* Header */
+table th {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 14px;
+  text-align: left;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Body Cells */
+table td {
+  padding: 12px;
+  font-size: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+/* Zebra Effect */
+table tr:nth-child(even) {
+  background: rgba(255,255,255,0.05);
+}
+
+/* Hover Effect */
+table tr:hover {
+  background: rgba(0, 242, 254, 0.15);
+  transition: 0.3s;
+}
+
+/* Action Links */
+table a {
+  color: #00f2fe;
+  text-decoration: none;
+  font-weight: 500;
+  transition: 0.3s;
+}
+
+table a:hover {
+  color: #ff4b2b;
+}
+
+/* =========================
+   SCROLL RESPONSIVE
+========================= */
+@media (max-width: 1000px) {
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}
+
+/* =========================
+   ANIMATION
+========================= */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(25px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+

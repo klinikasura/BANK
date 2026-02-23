@@ -1,0 +1,94 @@
+/* Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+/* Background */
+body {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Container Card */
+.container {
+  background: #ffffff;
+  padding: 40px;
+  border-radius: 15px;
+  width: 380px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  animation: fadeIn 0.6s ease-in-out;
+}
+
+/* Heading */
+.container h2 {
+  margin-bottom: 10px;
+  color: #333;
+}
+
+/* Welcome text */
+.container p {
+  margin-bottom: 25px;
+  color: #666;
+  font-size: 14px;
+}
+
+/* Menu list */
+.container ul {
+  list-style: none;
+}
+
+.container ul li {
+  margin: 15px 0;
+}
+
+/* Buttons */
+.container ul li a {
+  text-decoration: none;
+  display: block;
+  padding: 12px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+/* Hover Effect */
+.container ul li a:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+  opacity: 0.95;
+}
+
+/* Logout button special */
+.container ul li:last-child a {
+  background: linear-gradient(135deg, #ff416c, #ff4b2b);
+}
+
+/* Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .container {
+    width: 90%;
+    padding: 30px;
+  }
+}
+

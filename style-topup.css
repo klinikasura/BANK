@@ -1,0 +1,86 @@
+/* Reset & font */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+body {
+    background: linear-gradient(135deg,#1e3c72,#2a5298);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.container {
+    width: 450px;
+    background: rgba(255,255,255,0.08);
+    backdrop-filter: blur(15px);
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    color: #fff;
+}
+
+h2 {
+    text-align: center;
+    margin-bottom: 25px;
+    color: #00bcd4;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+input[type=text], input[type=number], select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 20px;
+    border: none;
+    border-radius: 8px;
+    outline: none;
+    font-size: 14px;
+}
+
+input[type=text]:focus, input[type=number]:focus, select:focus {
+    border: 2px solid #00bcd4;
+}
+
+input[type=submit] {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    background: #00bcd4;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+input[type=submit]:hover {
+    background: #0097a7;
+}
+
+/* Tambahan tombol kembali */
+.btn-kembali {
+    display: inline-block;
+    text-decoration: none;
+    background: #888;
+    color: #fff;
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin-top: 10px;
+    text-align: center;
+    transition: 0.3s;
+}
+
+.btn-kembali:hover {
+    background: #555;
+}
+

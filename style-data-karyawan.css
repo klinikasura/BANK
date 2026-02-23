@@ -1,0 +1,137 @@
+/* ===== RESET ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+/* ===== BACKGROUND ===== */
+body {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 20px;
+}
+
+/* ===== CONTAINER CARD ===== */
+.container {
+  width: 100%;
+  max-width: 1100px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  padding: 35px;
+  border-radius: 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  color: #fff;
+  animation: fadeIn 0.8s ease;
+}
+
+/* ===== TITLE ===== */
+.container h2 {
+  margin-bottom: 25px;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+/* ===== BUTTONS ===== */
+.btn {
+  display: inline-block;
+  padding: 10px 18px;
+  margin-bottom: 20px;
+  margin-right: 10px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: 0.3s ease;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #00c6ff, #0072ff);
+  color: white;
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, #757f9a, #d7dde8);
+  color: #333;
+}
+
+.btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+}
+
+/* ===== TABLE ===== */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+table thead {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+table th {
+  padding: 14px;
+  text-align: left;
+  background: rgba(255,255,255,0.15);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+table td {
+  padding: 12px;
+  font-size: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+/* Zebra Effect */
+table tr:nth-child(even) {
+  background: rgba(255,255,255,0.05);
+}
+
+/* Hover Row */
+table tr:hover {
+  background: rgba(0, 198, 255, 0.15);
+  transition: 0.3s;
+}
+
+/* Action Links */
+table a {
+  text-decoration: none;
+  font-weight: 500;
+  color: #00c6ff;
+  transition: 0.3s;
+}
+
+table a:hover {
+  color: #ff4b2b;
+}
+
+/* ===== SCROLL RESPONSIVE ===== */
+@media (max-width: 900px) {
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}
+
+/* ===== ANIMATION ===== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
