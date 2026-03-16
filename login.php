@@ -9,7 +9,7 @@
 </head>
 <body>
 <div class="container">
-    <h2>LOGIN BANK ROBOT</h2>
+    <h2>BANK myROBOT-V80</h2>
 
     <?php
     session_start();
