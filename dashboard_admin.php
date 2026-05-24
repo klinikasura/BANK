@@ -10,8 +10,8 @@ if (!isset($_SESSION['id_admin']) || $_SESSION['level'] != 'admin') {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link href="http://10.10.20.250/dashboard/download.jpeg" rel="icon" type="image/png" />
-<title>Aplikasi RS. Asura</title>
+ <title>myROBOT-V80</title>
+  <link href="http://10.10.20.250/dashboard/APPS-ROBOT/BUILDING APLIKASI/@API-GITHUB-V80/ROBOT-GITHUB/ROBOTV80.png" rel="icon" type="image/png" />
 <style>
 /* ---- Reset ---- */
 * {
@@ -108,6 +108,11 @@ ul li a:hover {
     <ul>
         <li><a href="data_tabungan.php">Data Tabungan</a></li>
         <li><a href="data_transaksi.php">Data Transaksi</a></li>
+<li><a href="data_nasabah.php">Data Nasabah</a></li>
+    <li><a href="data_admin.php">Data Admin</a></li>
+    <li><a href="data_posisi.php">Data Posisi</a></li>
+<li><a href="input_karyawan_baru.php">Form Karyawan</a></li>
+<li><a href="input_karyawan_baru.php">E-Penjualan</a></li>
         <li><a href="logout.php">Logout</a></li>
     </ul>
 </div>

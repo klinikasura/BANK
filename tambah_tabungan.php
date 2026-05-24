@@ -21,8 +21,36 @@ if (isset($_POST['submit'])) {
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Tambah Tabungan</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>myROBOT-V80</title>
+  <link href="http://10.10.20.250/dashboard/APPS-ROBOT/BUILDING APLIKASI/@API-GITHUB-V80/ROBOT-GITHUB/ROBOTV80.png" rel="icon" type="image/png" />
   <link rel="stylesheet" href="style.css">
+<style>
+.button-group{
+  display:flex;
+  gap:10px;
+  margin-top:20px;
+}
+
+.button-group input[type="submit"]{
+  flex:1;
+}
+
+.btn-kembali{
+  flex:1;
+  text-align:center;
+  background:#28a745;
+  color:white;
+  text-decoration:none;
+  padding:12px;
+  border-radius:8px;
+  font-weight:bold;
+}
+
+.btn-kembali:hover{
+  background:#1e7e34;
+}
+</style>
 </head>
 <body>
   <div class="container">
@@ -40,7 +68,15 @@ if (isset($_POST['submit'])) {
       </select><br><br>
       <label for="saldo">Saldo:</label>
       <input type="text" id="saldo" name="saldo"><br><br>
-      <input type="submit" name="submit" value="Simpan">
+ <div class="button-group">
+
+  <input type="submit" name="submit" value="Simpan">
+
+  <a href="data_tabungan.php" class="btn-kembali">
+    Kembali
+  </a>
+
+</div>
     </form>
   </div>
 </body>

@@ -1,0 +1,140 @@
+<?php
+session_start();
+include 'koneksi.php';
+
+if (!isset($_SESSION['id_admin'])) {
+    header("Location: login.php");
+    exit;
+}
+
+/* =========================
+   PAGINATION
+========================= */
+$batas = 5;
+$halaman = isset($_GET['halaman']) ? (int)$_GET['halaman'] : 1;
+$halaman = max(1, $halaman);
+$mulai = ($halaman - 1) * $batas;
+
+/* =========================
+   SEARCH
+========================= */
+$cari = isset($_GET['cari']) ? trim($_GET['cari']) : "";
+$cari_safe = mysqli_real_escape_string($koneksi, $cari);
+
+/* =========================
+   TOTAL DATA
+========================= */
+$sql_total = "
+    SELECT COUNT(*) as total 
+    FROM robot80_tb_kelas 
+    WHERE nama_kelas LIKE '%$cari_safe%'
+";
+
+$query_total = mysqli_query($koneksi, $sql_total);
+
+if (!$query_total) {
+    die("SQL ERROR (TOTAL): " . mysqli_error($koneksi));
+}
+
+$data_total = mysqli_fetch_assoc($query_total);
+$total_data = $data_total['total'] ?? 0;
+
+$total_halaman = ($total_data > 0) ? ceil($total_data / $batas) : 1;
+
+/* =========================
+   DATA
+========================= */
+$sql_data = "
+    SELECT * FROM robot80_tb_kelas
+    WHERE nama_kelas LIKE '%$cari_safe%'
+    ORDER BY id DESC
+    LIMIT $mulai, $batas
+";
+
+$data = mysqli_query($koneksi, $sql_data);
+
+if (!$data) {
+    die("SQL ERROR (DATA): " . mysqli_error($koneksi));
+}
+?>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Data Kelas</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+        table, th, td { border: 1px solid #ccc; }
+        th, td { padding: 10px; text-align: left; }
+
+        .pagination a {
+            padding: 6px 10px;
+            border: 1px solid #ccc;
+            margin-right: 5px;
+            text-decoration: none;
+            color: black;
+        }
+
+        .active {
+            background: #333;
+            color: white;
+        }
+
+        input {
+            padding: 6px;
+        }
+
+        button {
+            padding: 6px 10px;
+        }
+    </style>
+</head>
+<body>
+
+<h2>Data Kelas</h2>
+
+<!-- SEARCH -->
+<form method="GET">
+    <input type="text" name="cari" placeholder="Cari kelas..." value="<?php echo htmlspecialchars($cari); ?>">
+    <button type="submit">Cari</button>
+</form>
+
+<!-- TABLE -->
+<table>
+    <tr>
+        <th>No</th>
+        <th>Nama Kelas</th>
+    </tr>
+
+    <?php
+    $no = $mulai + 1;
+
+    if (mysqli_num_rows($data) > 0) {
+        while ($row = mysqli_fetch_assoc($data)) {
+    ?>
+        <tr>
+            <td><?php echo $no++; ?></td>
+            <td><?php echo htmlspecialchars($row['nama_kelas']); ?></td>
+        </tr>
+    <?php
+        }
+    } else {
+        echo "<tr><td colspan='2'>Data tidak ditemukan</td></tr>";
+    }
+    ?>
+
+</table>
+
+<!-- PAGINATION -->
+<div class="pagination" style="margin-top:10px;">
+    <?php for ($i = 1; $i <= $total_halaman; $i++) { ?>
+        <a class="<?php if ($i == $halaman) echo 'active'; ?>"
+           href="?halaman=<?php echo $i; ?>&cari=<?php echo urlencode($cari); ?>">
+            <?php echo $i; ?>
+        </a>
+    <?php } ?>
+</div>
+
+</body>
+</html>

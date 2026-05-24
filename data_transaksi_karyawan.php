@@ -9,43 +9,76 @@ require 'koneksi.php';
 
 $id_karyawan = $_SESSION['id_karyawan'];
 
-// Query ambil transaksi beserta nama karyawan dan jabatan
-// Untuk transfer, gabungkan dengan tabungan penerima/pengirim untuk keterangan
+/* FILTER + PAGINATION */
+$from = $_GET['from'] ?? '';
+$to   = $_GET['to'] ?? '';
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+
+if ($page < 1) $page = 1;
+
+$limit = 10;
+$offset = ($page - 1) * $limit;
+
+/* WHERE */
+$where = "WHERE tb.id_karyawan = '$id_karyawan'";
+
+if (!empty($from) && !empty($to)) {
+    $where .= " AND DATE(tr.tanggal) BETWEEN '$from' AND '$to'";
+}
+
+/* COUNT */
+$count_sql = "SELECT COUNT(*) as total
+              FROM robotv80_transaksi tr
+              JOIN robotv80_tabungan tb ON tr.id_tabungan = tb.id_tabungan
+              $where";
+
+$count_result = mysqli_query($koneksi, $count_sql);
+$total_row = mysqli_fetch_assoc($count_result)['total'];
+$total_page = ceil($total_row / $limit);
+
+/* =========================
+   QUERY UTAMA (FIX PENERIMA)
+========================= */
 $sql = "SELECT 
             tr.id_transaksi,
             tr.id_tabungan,
             tr.jenis_transaksi,
             tr.jumlah,
             tr.tanggal,
+            tr.transfer_ke,
             k.nama,
             k.jabatan,
-            CASE 
-                WHEN tr.jenis_transaksi LIKE 'Transfer%' THEN (
-                    SELECT k2.nama 
-                    FROM robotv80_transaksi tr2
-                    JOIN robotv80_tabungan tb2 ON tr2.id_tabungan = tb2.id_tabungan
-                    JOIN robotv80_karyawan k2 ON tb2.id_karyawan = k2.id_karyawan
-                    WHERE tr2.tanggal = tr.tanggal 
-                      AND tr2.jumlah = tr.jumlah
-                      AND tr2.id_transaksi != tr.id_transaksi
-                      LIMIT 1
-                )
-                ELSE NULL
-            END AS nama_lawan
+            tb.saldo,
+
+            /* ✅ INI YANG BENAR UNTUK NAMA PENERIMA */
+            kp.nama AS nama_penerima
+
         FROM robotv80_transaksi tr
         JOIN robotv80_tabungan tb ON tr.id_tabungan = tb.id_tabungan
         JOIN robotv80_karyawan k ON tb.id_karyawan = k.id_karyawan
-        WHERE tb.id_karyawan = '$id_karyawan'
-        ORDER BY tr.tanggal DESC";
+
+        /* PENERIMA HARUS DARI transfer_ke -> tabungan -> karyawan */
+        LEFT JOIN robotv80_tabungan tbp ON tr.transfer_ke = tbp.id_tabungan
+        LEFT JOIN robotv80_karyawan kp ON tbp.id_karyawan = kp.id_karyawan
+
+        $where
+        ORDER BY tr.tanggal DESC
+        LIMIT $limit OFFSET $offset";
 
 $result = mysqli_query($koneksi, $sql);
 
-function formatJenisTransaksi($jenis, $nama_lawan) {
-    if (strpos($jenis, 'Transfer') !== false && $nama_lawan) {
-        if ($jenis == 'Transfer Masuk') return "Transfer dari $nama_lawan";
-        if ($jenis == 'Transfer Keluar') return "Transfer ke $nama_lawan";
+/* FORMAT */
+function formatJenisTransaksi($row) {
+
+    if ($row['jenis_transaksi'] == 'Transfer Keluar') {
+        return "Transfer ke " . ($row['nama_penerima'] ?? '-');
     }
-    return ucfirst(strtolower($jenis));
+
+    if ($row['jenis_transaksi'] == 'Transfer Masuk') {
+        return "Transfer dari " . ($row['nama_penerima'] ?? '-');
+    }
+
+    return $row['jenis_transaksi'];
 }
 ?>
 
@@ -53,76 +86,229 @@ function formatJenisTransaksi($jenis, $nama_lawan) {
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link href="http://10.10.20.250/dashboard/download.jpeg" rel="icon" type="image/png" />
-<title>Aplikasi RS. Asura</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>myROBOT-V80</title>
+  <link href="http://10.10.20.250/dashboard/APPS-ROBOT/BUILDING APLIKASI/@API-GITHUB-V80/ROBOT-GITHUB/ROBOTV80.png" rel="icon" type="image/png" />
+
+
 <style>
-/* ---- CSS sama seperti sebelumnya ---- */
-body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color:#f9fafb; color:#333; padding:20px;}
-.container {max-width:1000px;margin:0 auto;background:#fff;padding:30px 40px;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,0.1);}
-h2{text-align:center;margin-bottom:25px;color:#2c3e50;font-weight:700;letter-spacing:1px;}
-nav{text-align:center;margin-bottom:20px;}
-nav a{display:inline-block;padding:10px 20px;margin:0 10px 20px 10px;background-color:#3498db;color:white;text-decoration:none;border-radius:7px;font-weight:600;box-shadow:0 5px 15px rgba(52,152,219,0.3);transition:background-color 0.3s;}
-nav a:hover{background-color:#2980b9;}
-table{width:100%;border-collapse:collapse;font-size:15px;}
-table thead tr{background-color:#2980b9;color:white;text-align:left;}
-table th, table td{padding:12px 15px;border-bottom:1px solid #ddd;}
-table tbody tr:hover{background-color:#f1f6fb;transition:0.3s;}
-@media (max-width:700px){
-  table thead{display:none;}
-  table, table tbody, table tr, table td{display:block;width:100%;}
-  table tr{margin-bottom:20px;box-shadow:0 5px 15px rgba(0,0,0,0.1);border-radius:8px;padding:15px;background:white;}
-  table td{padding-left:50%;position:relative;text-align:right;border-bottom:1px solid #eee;}
-  table td::before{position:absolute;left:15px;width:45%;font-weight:700;text-align:left;color:#555;}
-  table td[data-label="ID Transaksi"]::before{content:"ID Transaksi";}
-  table td[data-label="Tabungan"]::before{content:"ID Tabungan";}
-  table td[data-label="Nama"]::before{content:"Nama";}
-  table td[data-label="Jabatan"]::before{content:"Jabatan";}
-  table td[data-label="Jenis"]::before{content:"Jenis Transaksi";}
-  table td[data-label="Jumlah"]::before{content:"Jumlah";}
-  table td[data-label="Tanggal"]::before{content:"Tanggal";}
+body {
+  margin:0;
+  font-family:'Segoe UI',sans-serif;
+  background: linear-gradient(135deg,#0f172a,#1e3a8a,#2563eb);
+  color:#fff;
+}
+
+
+
+.container {
+  max-width:1100px;
+  margin:40px auto;
+  background:rgba(255,255,255,0.12);
+  backdrop-filter:blur(14px);
+  padding:25px;
+  border-radius:18px;
+}
+
+nav a {
+  margin:5px;
+  padding:10px 14px;
+  background:rgba(255,255,255,0.15);
+  color:#fff;
+  text-decoration:none;
+  border-radius:10px;
+}
+
+form {
+  text-align:center;
+  margin-bottom:15px;
+}
+
+input, button {
+  padding:8px;
+  border-radius:8px;
+  border:none;
+}
+
+button {
+  background:#22c55e;
+  color:#fff;
+}
+
+table {
+  width:100%;
+  border-collapse:collapse;
+  background:#fff;
+  color:#000;
+  border-radius:10px;
+  overflow:hidden;
+}
+
+th {
+  background:#2563eb;
+  color:#fff;
+  padding:12px;
+}
+
+td {
+  padding:10px;
+  text-align:center;
+  border-bottom:1px solid #eee;
+}
+
+.pagination {
+  text-align:center;
+  margin-top:15px;
+}
+
+.pagination a {
+  padding:8px 12px;
+  margin:0 5px;
+  background:rgba(255,255,255,0.2);
+  color:#fff;
+  text-decoration:none;
+  border-radius:8px;
+}
+
+/* =========================
+   RESPONSIVE HP
+========================= */
+@media (max-width: 768px) {
+
+  .container {
+    margin: 15px;
+    padding: 15px;
+  }
+
+  h2 {
+    font-size: 18px;
+  }
+
+  /* TABLE SCROLL */
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  th, td {
+    font-size: 12px;
+    padding: 8px;
+  }
+
+  nav {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  nav a {
+    font-size: 12px;
+    padding: 8px 10px;
+  }
+
+  input, button {
+    width: 100%;
+    margin-top: 5px;
+  }
+
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
 }
 </style>
 </head>
+
 <body>
+
 <div class="container">
-<h2>Data Transaksi Karyawan</h2>
+
+<h2 style="text-align:center;">Data Transaksi Karyawan</h2>
+
 <nav>
   <a href="karyawan.php">Dashboard</a>
-  <a href="transfer.php">Transfer Antar Karyawan</a>
- </nav>
+  <a href="transfer.php">Transfer</a>
+  <a href="data_transaksi_karyawan.php">Refresh</a>
+</nav>
+
+<form method="GET">
+  Dari:
+  <input type="date" name="from" value="<?= $from ?>">
+
+  Sampai:
+  <input type="date" name="to" value="<?= $to ?>">
+
+  <button type="submit">Cari</button>
+</form>
 
 <table>
 <thead>
 <tr>
-<th>ID Transaksi</th>
-<th>Tabungan</th>
-<th>Nama</th>
-<th>Jabatan</th>
-<th>Jenis Transaksi</th>
-<th>Jumlah</th>
-<th>Tanggal</th>
+  <th>ID</th>
+  <th>Tabungan</th>
+  <th>Nama</th>
+  <th>Jabatan</th>
+  <th>Jenis</th>
+  <th>Jumlah</th>
+  <th>Sisa Saldo</th>
+  <th>Penerima</th>
+  <th>Tanggal</th>
+  <th>Aksi</th>
 </tr>
 </thead>
+
 <tbody>
+
 <?php if(mysqli_num_rows($result) > 0): ?>
 <?php while($row = mysqli_fetch_assoc($result)): ?>
 <tr>
-<td data-label="ID Transaksi"><?php echo $row['id_transaksi']; ?></td>
-<td data-label="Tabungan"><?php echo $row['id_tabungan']; ?></td>
-<td data-label="Nama"><?php echo htmlspecialchars($row['nama']); ?></td>
-<td data-label="Jabatan"><?php echo htmlspecialchars($row['jabatan']); ?></td>
-<td data-label="Jenis"><?php echo formatJenisTransaksi($row['jenis_transaksi'], $row['nama_lawan']); ?></td>
-<td data-label="Jumlah">Rp <?php echo number_format($row['jumlah'],0,',','.'); ?></td>
-<td data-label="Tanggal"><?php echo date('d-m-Y H:i', strtotime($row['tanggal'])); ?></td>
+  <td><?= $row['id_transaksi']; ?></td>
+  <td><?= $row['id_tabungan']; ?></td>
+  <td><?= htmlspecialchars($row['nama']); ?></td>
+  <td><?= htmlspecialchars($row['jabatan']); ?></td>
+
+  <td><?= formatJenisTransaksi($row); ?></td>
+
+  <td>Rp <?= number_format($row['jumlah'],0,',','.'); ?></td>
+  <td>Rp <?= number_format($row['saldo'],0,',','.'); ?></td>
+
+  <!-- ✅ INI FIX PENERIMA -->
+  <td><?= htmlspecialchars($row['nama_penerima'] ?? '-') ?></td>
+
+  <td><?= date('d-m-Y H:i', strtotime($row['tanggal'])); ?></td>
+
+  <td>
+    <a href="struk.php?id=<?= $row['id_transaksi']; ?>" target="_blank"
+       style="padding:6px 10px;background:#f59e0b;color:#000;border-radius:6px;text-decoration:none;">
+       Cetak Struk
+    </a>
+  </td>
 </tr>
 <?php endwhile; ?>
 <?php else: ?>
-<tr><td colspan="7" style="text-align:center;padding:20px;">Belum ada data transaksi</td></tr>
+<tr>
+  <td colspan="10">Tidak ada data</td>
+</tr>
 <?php endif; ?>
+
 </tbody>
 </table>
+
+<div class="pagination">
+<?php if($page > 1): ?>
+  <a href="?from=<?= $from ?>&to=<?= $to ?>&page=<?= $page-1 ?>">⬅ Prev</a>
+<?php endif; ?>
+
+Page <?= $page ?> / <?= $total_page ?>
+
+<?php if($page < $total_page): ?>
+  <a href="?from=<?= $from ?>&to=<?= $to ?>&page=<?= $page+1 ?>">Next ➡</a>
+<?php endif; ?>
 </div>
+
+</div>
+
 </body>
 </html>
-

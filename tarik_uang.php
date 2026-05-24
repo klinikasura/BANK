@@ -37,8 +37,15 @@ if (isset($_POST['submit'])) {
 <!DOCTYPE html>
 <html>
 <head>
-<link href="http://10.10.20.250/dashboard/download.jpeg" rel="icon" type="image/png" />
-<title>Aplikasi RS. Asura</title>
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
+
+<title>myROBOT-V80</title>
+
+<link href="http://10.10.20.250/dashboard/APPS-ROBOT/BUILDING APLIKASI/@API-GITHUB-V80/ROBOT-GITHUB/ROBOTV80.png"
+rel="icon"
+type="image/png" />
+
 <link rel="stylesheet" href="style-tarik.css">
 </head>
 <body>
