@@ -10,7 +10,6 @@ if (!isset($_SESSION['id_admin'])) {
 /* =========================
    SIMPAN DATA
 ========================= */
-
 if (isset($_POST['simpan'])) {
 
     $nama   = mysqli_real_escape_string($koneksi, $_POST['nama']);
@@ -18,173 +17,36 @@ if (isset($_POST['simpan'])) {
     $alamat = mysqli_real_escape_string($koneksi, $_POST['alamat']);
     $notlp  = mysqli_real_escape_string($koneksi, $_POST['notlp']);
 
-    mysqli_begin_transaction($koneksi);
-
-    try {
-
-        /* =========================
-           SIMPAN NASABAH
-        ========================= */
-
-        mysqli_query(
-
-            $koneksi,
-
-            "INSERT INTO robot80_tb_siswa
-            (
-                nama,
-                kelas,
-                alamat,
-                notlp
-            )
-
-            VALUES
-            (
-                '$nama',
-                '$kelas',
-                '$alamat',
-                '$notlp'
-            )"
-
-        );
-
-        /* =========================
-           CEK KARYAWAN
-        ========================= */
-
-        $cek = mysqli_query(
-
-            $koneksi,
-
-            "SELECT * FROM robotv80_karyawan
-            WHERE nama = '$nama'"
-
-        );
-
-        /* =========================
-           JIKA BELUM ADA
-        ========================= */
-
-        if(mysqli_num_rows($cek) == 0){
-
-            mysqli_query(
-
-                $koneksi,
-
-                "INSERT INTO robotv80_karyawan
-                (
-                    nama,
-                    jabatan,
-                    alamat,
-                    no_tlp
-                )
-
-                VALUES
-                (
-                    '$nama',
-                    '$kelas',
-                    '$alamat',
-                    '$notlp'
-                )"
-
-            );
-
-        }
-
-        mysqli_commit($koneksi);
-
-        header("Location: data_nasabah.php");
-
-        exit;
-
-    } catch (Exception $e){
-
-        mysqli_rollback($koneksi);
-
-        echo "Gagal simpan data.";
-    }
-}
-
-/* =========================
-   HAPUS DATA
-========================= */
-
-if (isset($_GET['hapus'])) {
-
-    $id = (int) $_GET['hapus'];
-
-    /* =========================
-       AMBIL DATA NASABAH
-    ========================= */
-
-    $ambil = mysqli_query(
-
-        $koneksi,
-
-        "SELECT * FROM robot80_tb_siswa
-        WHERE id = '$id'"
-
-    );
-
-    $data_hapus = mysqli_fetch_assoc($ambil);
-
-    if($data_hapus){
-
-        $nama = mysqli_real_escape_string(
-            $koneksi,
-            $data_hapus['nama']
-        );
-
-        mysqli_begin_transaction($koneksi);
-
-        try {
-
-            /* =========================
-               HAPUS KARYAWAN
-            ========================= */
-
-            mysqli_query(
-
-                $koneksi,
-
-                "DELETE FROM robotv80_karyawan
-                WHERE nama = '$nama'"
-
-            );
-
-            /* =========================
-               HAPUS NASABAH
-            ========================= */
-
-            mysqli_query(
-
-                $koneksi,
-
-                "DELETE FROM robot80_tb_siswa
-                WHERE id = '$id'"
-
-            );
-
-            mysqli_commit($koneksi);
-
-        } catch (Exception $e){
-
-            mysqli_rollback($koneksi);
-
-            echo "Gagal hapus data.";
-        }
-
-    }
+    mysqli_query($koneksi, "
+        INSERT INTO robot80_tb_siswa
+        (nama, kelas, alamat, notlp)
+        VALUES
+        ('$nama','$kelas','$alamat','$notlp')
+    ");
 
     header("Location: data_nasabah.php");
-
     exit;
 }
 
 /* =========================
-   EDIT DATA
+   HAPUS
 ========================= */
+if (isset($_GET['hapus'])) {
 
+    $id = (int) $_GET['hapus'];
+
+    mysqli_query($koneksi,"
+        DELETE FROM robot80_tb_siswa
+        WHERE id='$id'
+    ");
+
+    header("Location: data_nasabah.php");
+    exit;
+}
+
+/* =========================
+   EDIT
+========================= */
 $edit = false;
 
 if (isset($_GET['edit'])) {
@@ -193,128 +55,68 @@ if (isset($_GET['edit'])) {
 
     $id_edit = (int) $_GET['edit'];
 
-    $ambil = mysqli_query(
-
-        $koneksi,
-
-        "SELECT * FROM robot80_tb_siswa
-        WHERE id='$id_edit'"
-
+    $e = mysqli_fetch_assoc(
+        mysqli_query($koneksi,"
+            SELECT * FROM robot80_tb_siswa
+            WHERE id='$id_edit'
+        ")
     );
-
-    $e = mysqli_fetch_assoc($ambil);
 }
 
 /* =========================
-   UPDATE DATA
+   UPDATE
 ========================= */
-
 if (isset($_POST['update'])) {
 
     $id = (int) $_POST['id'];
 
-    $nama_lama = mysqli_real_escape_string(
-        $koneksi,
-        $_POST['nama_lama']
-    );
+    mysqli_query($koneksi,"
+        UPDATE robot80_tb_siswa SET
+        nama='{$_POST['nama']}',
+        kelas='{$_POST['kelas']}',
+        alamat='{$_POST['alamat']}',
+        notlp='{$_POST['notlp']}'
+        WHERE id='$id'
+    ");
 
-    $nama = mysqli_real_escape_string(
-        $koneksi,
-        $_POST['nama']
-    );
-
-    $kelas = mysqli_real_escape_string(
-        $koneksi,
-        $_POST['kelas']
-    );
-
-    $alamat = mysqli_real_escape_string(
-        $koneksi,
-        $_POST['alamat']
-    );
-
-    $notlp = mysqli_real_escape_string(
-        $koneksi,
-        $_POST['notlp']
-    );
-
-    mysqli_begin_transaction($koneksi);
-
-    try {
-
-        /* =========================
-           UPDATE NASABAH
-        ========================= */
-
-        mysqli_query(
-
-            $koneksi,
-
-            "UPDATE robot80_tb_siswa SET
-
-            nama='$nama',
-            kelas='$kelas',
-            alamat='$alamat',
-            notlp='$notlp'
-
-            WHERE id='$id'"
-
-        );
-
-        /* =========================
-           UPDATE KARYAWAN
-        ========================= */
-
-        mysqli_query(
-
-            $koneksi,
-
-            "UPDATE robotv80_karyawan SET
-
-            nama='$nama',
-            jabatan='$kelas',
-            alamat='$alamat',
-            no_tlp='$notlp'
-
-            WHERE nama='$nama_lama'"
-
-        );
-
-        mysqli_commit($koneksi);
-
-        header("Location: data_nasabah.php");
-
-        exit;
-
-    } catch (Exception $e){
-
-        mysqli_rollback($koneksi);
-
-        echo "Gagal update data.";
-    }
+    header("Location: data_nasabah.php");
+    exit;
 }
 
 /* =========================
-   DATA ANGGOTA
+   PAGINATION + SEARCH
 ========================= */
 
-$anggota = mysqli_query(
+$limit = 5;
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$start = ($page - 1) * $limit;
 
-    $koneksi,
+$search = isset($_GET['search']) ? $_GET['search'] : "";
 
-    "SELECT * FROM robot80_data_anggota
-    ORDER BY nama ASC"
+/* DATA */
+$data = mysqli_query($koneksi,"
+    SELECT * FROM robot80_tb_siswa
+    WHERE nama LIKE '%$search%'
+    ORDER BY id DESC
+    LIMIT $start, $limit
+");
 
+/* TOTAL */
+$total = mysqli_fetch_assoc(
+    mysqli_query($koneksi,"
+        SELECT COUNT(*) as total
+        FROM robot80_tb_siswa
+        WHERE nama LIKE '%$search%'
+    ")
 );
 
+$total_page = ceil($total['total'] / $limit);
 ?>
 
 <!DOCTYPE html>
 <html lang="id">
 <head>
-
 <meta charset="UTF-8">
-
 <meta name="viewport"
 content="width=device-width, initial-scale=1.0">
 
@@ -325,500 +127,277 @@ rel="icon"
 type="image/png" />
 
 <style>
-
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-    font-family:'Segoe UI',sans-serif;
-}
-
 body{
-
-    background:
-    linear-gradient(
-    135deg,
-    #74ebd5,
-    #ACB6E5
-    );
-
-    min-height:100vh;
-
+    font-family:'Segoe UI';
+    background:linear-gradient(135deg,#74ebd5,#ACB6E5);
     padding:30px;
 }
 
 .container{
-
     max-width:1100px;
-
     margin:auto;
-
     background:white;
-
-    padding:30px;
-
+    padding:25px;
     border-radius:20px;
-
-    box-shadow:
-    0 10px 30px rgba(0,0,0,0.2);
+    box-shadow:0 10px 30px rgba(0,0,0,0.2);
 }
+/* ================= BOTTOM NAV ================= */
+.bottom-nav{
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+    background:white;
+    display:flex;
+    justify-content:space-around;
+    padding:14px 0;
+    box-shadow:0 -5px 20px rgba(0,0,0,0.08);
+    border-top:1px solid #e2e8f0;
+}
+
+.bottom-nav a{
+    text-decoration:none;
+    font-size:24px;
+    color:#0284c7;
+    padding:10px 18px;
+    border-radius:14px;
+    transition:0.2s;
+}
+
+.bottom-nav a:active{
+    background:#e0f2fe;
+    transform:scale(0.95);
+}
+
 
 h2{
-
-    margin-bottom:20px;
-
-    color:#333;
+    margin-bottom:15px;
 }
 
-label{
-
-    font-weight:600;
-
-    color:#444;
-}
-
-input,
-select,
-textarea{
-
+input,select,textarea{
     width:100%;
-
-    padding:12px;
-
-    margin-top:6px;
-
-    margin-bottom:18px;
-
+    padding:10px;
+    margin:5px 0 15px;
+    border-radius:8px;
     border:1px solid #ccc;
-
-    border-radius:10px;
-
-    font-size:15px;
-
-    transition:0.3s;
-}
-
-input:focus,
-select:focus,
-textarea:focus{
-
-    border-color:#2575fc;
-
-    outline:none;
-
-    box-shadow:
-    0 0 10px rgba(37,117,252,0.3);
 }
 
 button{
-
-    background:
-    linear-gradient(
-    135deg,
-    #2575fc,
-    #6a11cb
-    );
-
+    background:#2575fc;
     color:white;
-
     border:none;
-
-    padding:12px 20px;
-
-    border-radius:10px;
-
+    padding:10px 15px;
+    border-radius:8px;
     cursor:pointer;
-
-    font-weight:bold;
-
-    transition:0.3s;
 }
 
 button:hover{
-
-    transform:translateY(-2px);
-}
-
-.btn-dashboard{
-
-    background:
-    linear-gradient(
-    135deg,
-    #28a745,
-    #20c997
-    );
-
-    color:white;
-
-    padding:12px 20px;
-
-    border-radius:10px;
-
-    text-decoration:none;
-
-    display:inline-block;
-
-    font-weight:bold;
-}
-
-.btn-edit{
-
-    background:orange;
-
-    color:white;
-
-    padding:8px 12px;
-
-    text-decoration:none;
-
-    border-radius:6px;
-}
-
-.btn-hapus{
-
-    background:red;
-
-    color:white;
-
-    padding:8px 12px;
-
-    text-decoration:none;
-
-    border-radius:6px;
+    background:#1d4ed8;
 }
 
 table{
-
     width:100%;
-
     border-collapse:collapse;
-
-    margin-top:30px;
+    margin-top:20px;
 }
 
-table th,
-table td{
-
+table th,table td{
     border:1px solid #ddd;
-
-    padding:12px;
-
+    padding:10px;
     text-align:center;
 }
 
 table th{
-
     background:#2575fc;
-
     color:white;
 }
 
-tr:nth-child(even){
-
-    background:#f8f9fa;
+.btn-edit{
+    background:orange;
+    padding:5px 10px;
+    color:white;
+    text-decoration:none;
+    border-radius:5px;
 }
 
-tr:hover{
-
-    background:#eef4ff;
+.btn-hapus{
+    background:red;
+    padding:5px 10px;
+    color:white;
+    text-decoration:none;
+    border-radius:5px;
 }
 
-.action{
-
+/* SEARCH */
+.search-box{
     display:flex;
-
-    gap:6px;
-
-    justify-content:center;
+    gap:10px;
+    margin-bottom:10px;
 }
 
-@media(max-width:768px){
-
-    .container{
-
-        padding:20px;
-    }
-
-    table{
-
-        font-size:13px;
-    }
-
-    .action{
-
-        flex-direction:column;
-    }
+.search-box input{
+    flex:1;
 }
 
+/* PAGINATION */
+.pagination{
+    margin-top:20px;
+    text-align:center;
+}
+
+.pagination a{
+    padding:8px 12px;
+    margin:2px;
+    border:1px solid #2575fc;
+    text-decoration:none;
+    border-radius:6px;
+    color:#2575fc;
+}
+
+.pagination a.active{
+    background:#2575fc;
+    color:white;
+}
+.btn-back{
+    display:inline-block;
+    margin-bottom:15px;
+    padding:10px 15px;
+    background:linear-gradient(135deg,#6c757d,#495057);
+    color:white;
+    text-decoration:none;
+    border-radius:8px;
+    font-weight:600;
+    transition:0.3s;
+}
+
+.btn-back:hover{
+    transform:translateY(-2px);
+    background:linear-gradient(135deg,#495057,#343a40);
+    box-shadow:0 8px 20px rgba(0,0,0,0.2);
+}
 </style>
-
 </head>
 
 <body>
 
+
 <div class="container">
 
-<h2>
+<h2>📋 Data Nasabah Bank</h2>
+<a href="dashboard_admin.php" class="btn-back">⬅ Kembali</a>
 
-<?= $edit
-? 'Edit Data Nasabah'
-: 'Input Data Nasabah'; ?>
+<!-- SEARCH -->
+<form method="GET" class="search-box">
+    <input type="text" name="search"
+    placeholder="🔍 Cari nama nasabah..."
+    value="<?= $search ?>">
+    <button type="submit">Cari</button>
+</form>
 
-</h2>
-
+<!-- FORM -->
 <form method="POST">
 
 <?php if($edit){ ?>
 
-<input
-type="hidden"
-name="id"
-value="<?= $e['id']; ?>">
-
-<input
-type="hidden"
-name="nama_lama"
-value="<?= $e['nama']; ?>">
+<input type="hidden" name="id" value="<?= $e['id'] ?>">
 
 <label>Nama</label>
+<input type="text" name="nama" value="<?= $e['nama'] ?>">
 
-<input
-type="text"
-name="nama"
-value="<?= $e['nama']; ?>"
-required>
+<label>Posisi</label>
+<input type="text" name="kelas" value="<?= $e['kelas'] ?>">
 
-<label>Kelas / Jabatan</label>
+<label>Link Photo</label>
+<textarea name="alamat"><?= $e['alamat'] ?></textarea>
 
-<input
-type="text"
-name="kelas"
-value="<?= $e['kelas']; ?>"
-required>
+<label>No HP</label>
+<input type="text" name="notlp" value="<?= $e['notlp'] ?>">
 
-<label>Alamat</label>
-
-<textarea
-name="alamat"
-required><?= $e['alamat']; ?></textarea>
-
-<label>No Telepon</label>
-
-<input
-type="text"
-name="notlp"
-value="<?= $e['notlp']; ?>"
-required>
-
-<div style="display:flex; gap:10px;">
-
-<button
-type="submit"
-name="update">
-
-Update
-
-</button>
-
-<a href="data_nasabah.php"
-class="btn-dashboard">
-
-Kembali
-
-</a>
-
-</div>
+<button name="update">Update</button>
 
 <?php } else { ?>
 
-<label>Pilih Nama</label>
+<label>Nama</label>
+<input type="text" name="nama" required>
 
-<select
-name="nama"
-id="namaSelect"
-required>
+<label>Posisi</label>
+<input type="text" name="kelas" required>
 
-<option value="">
+<label>Link Photo</label>
+<textarea name="alamat" required></textarea>
 
--- Pilih Nama --
+<label>No HP</label>
+<input type="text" name="notlp" required>
 
-</option>
-
-<?php while($a = mysqli_fetch_assoc($anggota)) { ?>
-
-<option
-value="<?= $a['nama']; ?>"
-
-data-kelas="<?= $a['posisi']; ?>"
-
-data-alamat="<?= $a['alamat']; ?>"
-
-data-hp="<?= $a['hp']; ?>"
-
->
-
-<?= $a['nama']; ?>
-
-</option>
-
-<?php } ?>
-
-</select>
-
-<label>Kelas / Jabatan</label>
-
-<input
-type="text"
-name="kelas"
-id="kelas"
-readonly>
-
-<label>Alamat</label>
-
-<textarea
-name="alamat"
-id="alamat"
-readonly></textarea>
-
-<label>No Telepon</label>
-
-<input
-type="text"
-name="notlp"
-id="notlp"
-readonly>
-
-<div style="display:flex; gap:10px;">
-
-<button
-type="submit"
-name="simpan">
-
-Simpan
-
-</button>
-
-<a href="dashboard_admin.php"
-class="btn-dashboard">
-
-Dashboard
-
-</a>
-
-</div>
+<button name="simpan">Simpan</button>
 
 <?php } ?>
 
 </form>
 
-<h2 style="margin-top:40px;">
-
-Data Nasabah
-
-</h2>
-
+<!-- TABLE -->
 <table>
 
 <tr>
-
 <th>No</th>
 <th>Nama</th>
-<th>Kelas</th>
-<th>Alamat</th>
-<th>No Telepon</th>
+<th>Posisi</th>
+<th>Link Photo</th>
+<th>No HP</th>
 <th>Aksi</th>
-
 </tr>
 
-<?php
-
-$no = 1;
-
-$data = mysqli_query(
-
-    $koneksi,
-
-    "SELECT * FROM robot80_tb_siswa
-    ORDER BY id DESC"
-
-);
-
-while($d = mysqli_fetch_array($data)) {
-
-?>
+<?php $no=1; while($d=mysqli_fetch_array($data)) { ?>
 
 <tr>
-
-<td><?= $no++; ?></td>
-
-<td><?= $d['nama']; ?></td>
-
-<td><?= $d['kelas']; ?></td>
-
-<td><?= $d['alamat']; ?></td>
-
-<td><?= $d['notlp']; ?></td>
-
+<td><?= $no++ ?></td>
+<td><?= $d['nama'] ?></td>
+<td><?= $d['kelas'] ?></td>
+<td><?= $d['alamat'] ?></td>
+<td><?= $d['notlp'] ?></td>
 <td>
-
-<div class="action">
-
-<a
-href="?edit=<?= $d['id']; ?>"
-class="btn-edit">
-
-Edit
-
-</a>
-
-<a
-href="?hapus=<?= $d['id']; ?>"
-class="btn-hapus"
-
-onclick="return confirm('Yakin hapus data?')">
-
-Hapus
-
-</a>
-
-</div>
-
+<a class="btn-edit" href="?edit=<?= $d['id'] ?>">Edit</a><p>
+<a class="btn-hapus" href="?hapus=<?= $d['id'] ?>"
+onclick="return confirm('Hapus data?')">Hapus</a>
 </td>
-
 </tr>
 
 <?php } ?>
 
 </table>
 
+<!-- PAGINATION -->
+<div class="pagination">
+
+<?php for($i=1; $i<=$total_page; $i++) { ?>
+
+<a class="<?= ($i==$page)?'active':'' ?>"
+href="?page=<?= $i ?>&search=<?= $search ?>">
+<?= $i ?>
+</a>
+
+<?php } ?>
+
 </div>
 
-<script>
+</div>
 
-const namaSelect =
-document.getElementById('namaSelect');
+ <p>&nbsp;</p>
+   <p>&nbsp;</p>
+   <p>&nbsp;</p>
+   <p>&nbsp;</p>
+   <p>&nbsp;</p>
 
-if(namaSelect){
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
 
-namaSelect.addEventListener('change', function(){
+    <a href="dashboard_admin.php">🏠</a>
+    <a href="data_transaksi.php">📊</a>
+    <a href="data_nasabah.php">👥</a>
+    <a href="logout.php">🚪</a>
 
-    const selected =
-    this.options[this.selectedIndex];
+</div>
 
-    document.getElementById('kelas').value =
-    selected.getAttribute('data-kelas');
-
-    document.getElementById('alamat').value =
-    selected.getAttribute('data-alamat');
-
-    document.getElementById('notlp').value =
-    selected.getAttribute('data-hp');
-
-});
-
-}
-
-</script>
 
 </body>
 </html>

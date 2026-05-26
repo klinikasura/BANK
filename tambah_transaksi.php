@@ -1,385 +1,31 @@
 <?php
 session_start();
-
 if (!isset($_SESSION['id_admin'])) {
-    header('Location: login.php');
+    header("Location: login.php");
     exit;
 }
 
-require 'koneksi.php';
-
-$error = '';
-
-/* =====================================
-   SIMPAN TRANSAKSI
-===================================== */
-
-if (isset($_POST['submit'])) {
-
-    $id_tabungan = $_POST['id_tabungan'];
-
-    $jenis_transaksi =
-    $_POST['jenis_transaksi'];
-
-    // hapus format rupiah
-    $jumlah =
-    str_replace('.', '', $_POST['jumlah']);
-
-    $jumlah = (int)$jumlah;
-
-    /* =====================================
-       VALIDASI JUMLAH
-    ===================================== */
-
-    if ($jumlah <= 0) {
-
-        $error =
-        "Nominal harus lebih besar dari 0.";
-
-    } else {
-
-        /* =====================================
-           SETOR
-        ===================================== */
-
-        if ($jenis_transaksi == 'Setor') {
-
-            mysqli_begin_transaction($koneksi);
-
-            try {
-
-                mysqli_query(
-
-                    $koneksi,
-
-                    "INSERT INTO robotv80_transaksi
-                    (
-                        id_tabungan,
-                        jenis_transaksi,
-                        jumlah,
-                        tanggal
-                    )
-
-                    VALUES
-                    (
-                        '$id_tabungan',
-                        'Setor',
-                        '$jumlah',
-                        NOW()
-                    )"
-
-                );
-
-                mysqli_query(
-
-                    $koneksi,
-
-                    "UPDATE robotv80_tabungan
-
-                    SET saldo = saldo + '$jumlah'
-
-                    WHERE id_tabungan = '$id_tabungan'"
-
-                );
-
-                mysqli_commit($koneksi);
-
-                header('Location: data_transaksi.php');
-
-                exit;
-
-            } catch (Exception $e) {
-
-                mysqli_rollback($koneksi);
-
-                $error = "Gagal melakukan setor.";
-            }
-        }
-
-        /* =====================================
-           TARIK
-        ===================================== */
-
-        elseif ($jenis_transaksi == 'Tarik') {
-
-            $cek = mysqli_query(
-
-                $koneksi,
-
-                "SELECT saldo
-
-                FROM robotv80_tabungan
-
-                WHERE id_tabungan='$id_tabungan'"
-
-            );
-
-            $row = mysqli_fetch_assoc($cek);
-
-            if ($row['saldo'] < $jumlah) {
-
-                $error =
-                "Saldo tidak cukup untuk tarik.";
-
-            } else {
-
-                mysqli_begin_transaction($koneksi);
-
-                try {
-
-                    mysqli_query(
-
-                        $koneksi,
-
-                        "INSERT INTO robotv80_transaksi
-                        (
-                            id_tabungan,
-                            jenis_transaksi,
-                            jumlah,
-                            tanggal
-                        )
-
-                        VALUES
-                        (
-                            '$id_tabungan',
-                            'Tarik',
-                            '$jumlah',
-                            NOW()
-                        )"
-
-                    );
-
-                    mysqli_query(
-
-                        $koneksi,
-
-                        "UPDATE robotv80_tabungan
-
-                        SET saldo = saldo - '$jumlah'
-
-                        WHERE id_tabungan = '$id_tabungan'"
-
-                    );
-
-                    mysqli_commit($koneksi);
-
-                    header('Location: data_transaksi.php');
-
-                    exit;
-
-                } catch (Exception $e) {
-
-                    mysqli_rollback($koneksi);
-
-                    $error = "Gagal tarik uang.";
-                }
-            }
-        }
-
-        /* =====================================
-           TRANSFER
-        ===================================== */
-
-        elseif ($jenis_transaksi == 'Transfer') {
-
-            $id_tabungan_penerima =
-            $_POST['id_tabungan_penerima'];
-
-            if ($id_tabungan ==
-                $id_tabungan_penerima) {
-
-                $error =
-                "Pengirim dan penerima tidak boleh sama.";
-
-            } else {
-
-                /* =========================
-                   DATA PENGIRIM
-                ========================= */
-
-                $qp = mysqli_query(
-
-                    $koneksi,
-
-                    "SELECT
-                    tb.*,
-                    k.nama
-
-                    FROM robotv80_tabungan tb
-
-                    JOIN robotv80_karyawan k
-                    ON tb.id_karyawan = k.id_karyawan
-
-                    WHERE tb.id_tabungan =
-                    '$id_tabungan'"
-
-                );
-
-                $pengirim =
-                mysqli_fetch_assoc($qp);
-
-                /* =========================
-                   DATA PENERIMA
-                ========================= */
-
-                $qr = mysqli_query(
-
-                    $koneksi,
-
-                    "SELECT
-                    tb.*,
-                    k.nama
-
-                    FROM robotv80_tabungan tb
-
-                    JOIN robotv80_karyawan k
-                    ON tb.id_karyawan = k.id_karyawan
-
-                    WHERE tb.id_tabungan =
-                    '$id_tabungan_penerima'"
-
-                );
-
-                $penerima =
-                mysqli_fetch_assoc($qr);
-
-                if (!$pengirim || !$penerima) {
-
-                    $error =
-                    "Data tabungan tidak ditemukan.";
-
-                } else {
-
-                    if ($pengirim['saldo'] < $jumlah) {
-
-                        $error =
-                        "Saldo tidak cukup untuk transfer.";
-
-                    } else {
-
-                        mysqli_begin_transaction($koneksi);
-
-                        try {
-
-                            $nama_pengirim =
-                            $pengirim['nama'];
-
-                            $nama_penerima =
-                            $penerima['nama'];
-
-                            /* =========================
-                               UPDATE SALDO
-                            ========================= */
-
-                            mysqli_query(
-
-                                $koneksi,
-
-                                "UPDATE robotv80_tabungan
-
-                                SET saldo = saldo - '$jumlah'
-
-                                WHERE id_tabungan =
-                                '$id_tabungan'"
-
-                            );
-
-                            mysqli_query(
-
-                                $koneksi,
-
-                                "UPDATE robotv80_tabungan
-
-                                SET saldo = saldo + '$jumlah'
-
-                                WHERE id_tabungan =
-                                '$id_tabungan_penerima'"
-
-                            );
-
-                            /* =========================
-                               TRANSAKSI PENGIRIM
-                            ========================= */
-
-                            mysqli_query(
-
-                                $koneksi,
-
-                                "INSERT INTO robotv80_transaksi
-                                (
-                                    id_tabungan,
-                                    jenis_transaksi,
-                                    jumlah,
-                                    tanggal,
-                                    transfer_ke
-                                )
-
-                                VALUES
-                                (
-                                    '$id_tabungan',
-                                    'Transfer',
-                                    '$jumlah',
-                                    NOW(),
-                                    '$nama_penerima'
-                                )"
-
-                            );
-
-                            /* =========================
-                               TRANSAKSI PENERIMA
-                            ========================= */
-
-                            mysqli_query(
-
-                                $koneksi,
-
-                                "INSERT INTO robotv80_transaksi
-                                (
-                                    id_tabungan,
-                                    jenis_transaksi,
-                                    jumlah,
-                                    tanggal,
-                                    transfer_ke
-                                )
-
-                                VALUES
-                                (
-                                    '$id_tabungan_penerima',
-                                    'Transfer Masuk',
-                                    '$jumlah',
-                                    NOW(),
-                                    '$nama_pengirim'
-                                )"
-
-                            );
-
-                            mysqli_commit($koneksi);
-
-                            header('Location: data_transaksi.php');
-
-                            exit;
-
-                        } catch (Exception $e) {
-
-                            mysqli_rollback($koneksi);
-
-                            $error =
-                            "Transfer gagal.";
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
+require "koneksi.php";
+
+/* Data rekening + saldo */
+$rekening = mysqli_query($koneksi,"
+    SELECT t.id_tabungan, t.saldo, k.nama
+    FROM robotv80_tabungan t
+    JOIN robotv80_karyawan k ON t.id_karyawan = k.id_karyawan
+");
+
+/* Untuk transfer ke */
+$transferList = mysqli_query($koneksi,"
+    SELECT t.id_tabungan, k.nama
+    FROM robotv80_tabungan t
+    JOIN robotv80_karyawan k ON t.id_karyawan = k.id_karyawan
+");
 ?>
 
 <!DOCTYPE html>
 <html>
 <head>
-
 <meta charset="UTF-8">
-
 <meta name="viewport"
 content="width=device-width, initial-scale=1.0">
 
@@ -390,338 +36,201 @@ rel="icon"
 type="image/png" />
 
 <style>
-
-body{
-
-    font-family:Arial;
-
-    background:#f0f2f5;
-
-    margin:0;
-
-    padding:0;
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #e0f2fe, #f8fafc);
+    display: flex;
+    justify-content: center;
+    padding: 30px;
 }
 
-.container{
-
-    width:500px;
-
-    margin:40px auto;
-
-    background:#fff;
-
-    padding:25px 30px;
-
-    border-radius:10px;
-
-    box-shadow:0 0 15px rgba(0,0,0,0.2);
+.container {
+    background: white;
+    padding: 25px;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 650px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.1);
 }
 
-h2{
-
-    text-align:center;
-
-    margin-bottom:20px;
+h2 {
+    margin-bottom: 20px;
 }
 
-label{
-
-    display:block;
-
-    margin-bottom:5px;
-
-    font-weight:bold;
+label {
+    font-weight: 600;
+    display: block;
+    margin-top: 10px;
 }
 
-select,
-input[type="text"]{
-
-    width:100%;
-
-    padding:10px;
-
-    margin-bottom:15px;
-
-    border-radius:5px;
-
-    border:1px solid #ccc;
+select, input {
+    width: 100%;
+    padding: 10px;
+    margin-top: 5px;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
 }
 
-input[type="submit"]{
-
-    background:#28a745;
-
-    color:white;
-
-    border:none;
-
-    padding:10px 20px;
-
-    border-radius:5px;
-
-    cursor:pointer;
+/* saldo box */
+.saldo-box {
+    background: #ecfeff;
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 10px;
+    font-weight: bold;
+    color: #0369a1;
+    display: none;
 }
 
-input[type="submit"]:hover{
-
-    background:#218838;
+/* transfer box */
+#transferBox {
+    display: none;
 }
 
-.btn-kembali{
+.btn {
+    margin-top: 20px;
+    padding: 10px 14px;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+}
 
-    background:#6c757d;
+.btn-save {
+    background: #0ea5e9;
+    color: white;
+}
 
-    color:white;
+.btn-back {
+    background: #e2e8f0;
+    color: #0f172a;
+    text-decoration: none;
+    display: inline-block;
+    padding: 10px 14px;
+    border-radius: 10px;
+    margin-left: 10px;
+}
+/* ================= BOTTOM NAV ================= */
+.bottom-nav{
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+    background:white;
+    display:flex;
+    justify-content:space-around;
+    padding:14px 0;
+    box-shadow:0 -5px 20px rgba(0,0,0,0.08);
+    border-top:1px solid #e2e8f0;
+}
 
-    padding:10px 20px;
-
-    border-radius:5px;
-
+.bottom-nav a{
     text-decoration:none;
-
-    margin-left:5px;
+    font-size:24px;
+    color:#0284c7;
+    padding:10px 18px;
+    border-radius:14px;
+    transition:0.2s;
 }
 
-.alert{
-
-    background:#dc3545;
-
-    color:white;
-
-    padding:10px;
-
-    border-radius:5px;
-
-    margin-bottom:15px;
+.bottom-nav a:active{
+    background:#e0f2fe;
+    transform:scale(0.95);
 }
-
 </style>
 
 </head>
-
 <body>
 
 <div class="container">
 
-<h2>Tambah Transaksi</h2>
-
-<?php if(isset($error)){ ?>
-
-<div class="alert">
-
-<?= $error; ?>
-
-</div>
-
-<?php } ?>
-
-<form action="" method="post">
-
-<label>
-
-ID Tabungan
-
-</label>
-
-<select
-id="id_tabungan"
-name="id_tabungan"
-required>
-
-<?php
-
-$sql = "
-
-SELECT
-t.id_tabungan,
-k.nama
-
-FROM robotv80_tabungan t
-
-JOIN robotv80_karyawan k
-ON t.id_karyawan = k.id_karyawan
-
-ORDER BY k.nama ASC
-
-";
-
-$result = mysqli_query($koneksi, $sql);
-
-while($row = mysqli_fetch_assoc($result)){
-
-echo "
-
-<option value='".$row['id_tabungan']."'>
-
-".$row['id_tabungan']." - ".$row['nama']."
-
-</option>
-
-";
-
-}
-
-?>
-
-</select>
-
-<label>
-
-Jenis Transaksi
-
-</label>
-
-<select
-id="jenis_transaksi"
-name="jenis_transaksi"
-required>
-
-<option value="Setor">
-
-Setor
-
-</option>
-
-<option value="Tarik">
-
-Tarik
-
-</option>
-
-<option value="Transfer">
-
-Transfer
-
-</option>
-
-</select>
-
-<div id="transfer-penerima"
-style="display:none;">
-
-<label>
-
-Tabungan Penerima
-
-</label>
-
-<select
-name="id_tabungan_penerima">
-
-<?php
-
-$sql = "
-
-SELECT
-t.id_tabungan,
-k.nama
-
-FROM robotv80_tabungan t
-
-JOIN robotv80_karyawan k
-ON t.id_karyawan = k.id_karyawan
-
-ORDER BY k.nama ASC
-
-";
-
-$result = mysqli_query($koneksi, $sql);
-
-while($row = mysqli_fetch_assoc($result)){
-
-echo "
-
-<option value='".$row['id_tabungan']."'>
-
-".$row['id_tabungan']." - ".$row['nama']."
-
-</option>
-
-";
-
-}
-
-?>
-
-</select>
-
-</div>
-
-<label>
-
-Jumlah
-
-</label>
-
-<input
-type="text"
-id="jumlah"
-name="jumlah"
-placeholder="Contoh: 1.000.000"
-required
->
-
-<input
-type="submit"
-name="submit"
-value="Simpan"
->
-
-<a href="data_transaksi.php"
-class="btn-kembali">
-
-Kembali
-
-</a>
+<h2>💳 Transaksi Bank</h2>
+
+<form action="simpan_transaksi.php" method="POST">
+
+    <!-- REKENING -->
+    <label>Pilih Rekening</label>
+    <select name="id_tabungan" id="rekening" onchange="showSaldo()" required>
+        <option value="">-- Pilih --</option>
+        <?php while($r = mysqli_fetch_assoc($rekening)) { ?>
+            <option value="<?php echo $r['id_tabungan']; ?>"
+                    data-saldo="<?php echo $r['saldo']; ?>">
+                <?php echo $r['nama']; ?> (ID <?php echo $r['id_tabungan']; ?>)
+            </option>
+        <?php } ?>
+    </select>
+
+    <div class="saldo-box" id="saldoBox"></div>
+
+    <!-- JENIS TRANSAKSI -->
+    <label>Jenis Transaksi</label>
+    <select name="jenis_transaksi" id="jenis" onchange="toggleTransfer()" required>
+        <option value="">-- Pilih --</option>
+        <option value="Setor">Setor</option>
+        <option value="Tarik">Tarik</option>
+        <option value="Transfer">Transfer</option>
+    </select>
+
+    <!-- JUMLAH -->
+    <label>Jumlah</label>
+    <input type="number" name="jumlah" required>
+
+    <!-- TRANSFER KE -->
+    <div id="transferBox">
+        <label>Transfer Ke</label>
+        <select name="transfer_ke">
+            <option value="">-- Pilih Tujuan --</option>
+            <?php while($t = mysqli_fetch_assoc($transferList)) { ?>
+                <option value="<?php echo $t['id_tabungan']; ?>">
+                    <?php echo $t['nama']; ?> (ID <?php echo $t['id_tabungan']; ?>)
+                </option>
+            <?php } ?>
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-save">💾 Simpan</button>
+    <a href="data_transaksi.php" class="btn-back">⬅ Kembali</a>
 
 </form>
 
 </div>
 
 <script>
+function showSaldo() {
+    let select = document.getElementById("rekening");
+    let saldo = select.options[select.selectedIndex].getAttribute("data-saldo");
 
-/* =========================
-   FORMAT RUPIAH
-========================= */
+    let box = document.getElementById("saldoBox");
 
-const jumlah =
-document.getElementById('jumlah');
-
-jumlah.addEventListener('input', function(){
-
-let angka =
-this.value.replace(/\D/g,'');
-
-this.value =
-angka.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-
-});
-
-/* =========================
-   TAMPILKAN PENERIMA
-========================= */
-
-const jenis =
-document.getElementById('jenis_transaksi');
-
-const penerima =
-document.getElementById('transfer-penerima');
-
-jenis.addEventListener('change', function(){
-
-if(this.value == 'Transfer'){
-
-penerima.style.display = 'block';
-
-}else{
-
-penerima.style.display = 'none';
-
+    if (saldo) {
+        box.style.display = "block";
+        box.innerHTML = "💰 Saldo: Rp " + parseInt(saldo).toLocaleString();
+    } else {
+        box.style.display = "none";
+    }
 }
 
-});
+function toggleTransfer() {
+    let jenis = document.getElementById("jenis").value;
+    let box = document.getElementById("transferBox");
 
+    if (jenis === "Transfer") {
+        box.style.display = "block";
+    } else {
+        box.style.display = "none";
+    }
+}
 </script>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+
+    <a href="dashboard_admin.php">🏠</a>
+    <a href="data_transaksi.php">📊</a>
+    <a href="data_nasabah.php">👥</a>
+    <a href="logout.php">🚪</a>
+
+</div>
 
 </body>
 </html>

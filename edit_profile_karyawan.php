@@ -116,6 +116,50 @@ button:hover{
     text-decoration:none;
     color:#555;
 }
+/* ===== BOTTOM NAV UPGRADE ===== */
+.bottom-nav{
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+    background:white;
+    display:flex;
+    justify-content:space-around;
+    padding:14px 0;
+    border-top:1px solid #e5e7eb;
+    box-shadow:0 -5px 20px rgba(0,0,0,0.08);
+}
+
+.bottom-nav a{
+    text-decoration:none;
+    font-size:22px;
+    padding:10px 18px;
+    border-radius:14px;
+    transition:0.2s;
+}
+
+.bottom-nav a:active{
+    background:#e0e7ff;
+    transform:scale(0.95);
+}
+
+.container {
+  max-width:1100px;
+  margin:40px auto;
+  background:rgba(255,255,255,0.12);
+  backdrop-filter:blur(14px);
+  padding:25px;
+  border-radius:18px;
+}
+
+nav a {
+  margin:5px;
+  padding:10px 14px;
+  background:rgba(255,255,255,0.15);
+  color:#fff;
+  text-decoration:none;
+  border-radius:10px;
+}
 </style>
 </head>
 
@@ -123,7 +167,7 @@ button:hover{
 
 <div class="container">
 
-<h2>Profile Karyawan</h2>
+<h2>Profile Nasabah</h2>
 
 <?php if($error): ?>
 <div class="alert error"><?= $error ?></div>
@@ -135,16 +179,16 @@ button:hover{
 
 <form method="POST">
 
-<label>Nama (Tidak bisa diubah)</label>
+<label>Nama</label>
 <input type="text" value="<?= htmlspecialchars($data['nama']) ?>" disabled>
 
-<label>Jabatan (Tidak bisa diubah)</label>
+<label>Jabatan</label>
 <input type="text" value="<?= htmlspecialchars($data['jabatan']) ?>" disabled>
 
-<label>Alamat (Tidak bisa diubah)</label>
+<label>Alamat</label>
 <input type="text" value="<?= htmlspecialchars($data['alamat']) ?>" disabled>
 
-<label>No Telepon (Bisa diedit)</label>
+<label>No Telepon</label>
 <input type="text" name="no_tlp" value="<?= htmlspecialchars($data['no_tlp']) ?>">
 
 <button type="submit" name="update">Simpan</button>
@@ -154,6 +198,23 @@ button:hover{
 <a href="karyawan.php" class="back">← Kembali</a>
 
 </div>
+
+</body>
+   <p>&nbsp;</p>
+   <p>&nbsp;</p>
+   <p>&nbsp;</p>
+   <p>&nbsp;</p>
+   <p>&nbsp;</p>
+
+
+<!-- BOTTOM NAV (BESAR + PREMIUM) -->
+<div class="bottom-nav">
+    <a href="karyawan.php">🏠</a>
+    <a href="transfer.php">💸</a>
+    <a href="data_transaksi_karyawan.php">📊</a>
+    <a href="edit_profile_karyawan.php">👤</a>
+</div>
+
 
 </body>
 </html>

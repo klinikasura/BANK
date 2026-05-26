@@ -2,7 +2,7 @@
 session_start();
 require 'koneksi.php';
 
-if (!isset($_SESSION['id_admin']) && !isset($_SESSION['id_karyawan'])) {
+if (!isset($_SESSION['id_karyawan'])) {
     header('Location: login.php');
     exit;
 }
@@ -11,263 +11,466 @@ $error = '';
 $success = '';
 $struk = null;
 
-if (isset($_POST['submit'])) {
-    $id_tabungan_pengirim = $_POST['id_tabungan_pengirim'];
+$id_karyawan = $_SESSION['id_karyawan'];
+
+/* =========================
+   AMBIL DATA LOGIN
+========================= */
+
+$q_login = mysqli_query($koneksi, "
+    SELECT 
+        t.id_tabungan,
+        t.saldo,
+        k.nama
+    FROM robotv80_tabungan t
+    JOIN robotv80_karyawan k
+    ON t.id_karyawan = k.id_karyawan
+    WHERE t.id_karyawan = '$id_karyawan'
+    LIMIT 1
+");
+
+$data_login = mysqli_fetch_assoc($q_login);
+
+$id_tabungan_pengirim = $data_login['id_tabungan'];
+$saldo_pengirim       = $data_login['saldo'];
+$nama_pengirim        = $data_login['nama'];
+
+/* =========================
+   PROSES TRANSFER
+========================= */
+
+if(isset($_POST['submit'])){
+
     $id_tabungan_penerima = $_POST['id_tabungan_penerima'];
 
-    $jumlah = str_replace(['.', ','], '', $_POST['jumlah']);
+    $jumlah = str_replace('.', '', $_POST['jumlah']);
     $jumlah = (int)$jumlah;
 
-    if ($id_tabungan_pengirim == $id_tabungan_penerima) {
-        $error = "Tabungan tidak boleh sama.";
-    } elseif ($jumlah <= 0) {
-        $error = "Jumlah harus lebih dari 0.";
-    } else {
+    /* =========================
+       VALIDASI
+    ========================= */
 
-        // CEK PENGIRIM
-        $q = mysqli_query($koneksi, "SELECT saldo FROM robotv80_tabungan WHERE id_tabungan='$id_tabungan_pengirim'");
-        $pengirim = mysqli_fetch_assoc($q);
+    if($id_tabungan_pengirim == $id_tabungan_penerima){
 
-        if (!$pengirim) {
-            $error = "Pengirim tidak ditemukan.";
-        } elseif ($pengirim['saldo'] < $jumlah) {
-            $error = "Saldo tidak cukup.";
-        } else {
+        $error = "Tidak bisa transfer ke rekening sendiri.";
 
-            // CEK PENERIMA
-            $q = mysqli_query($koneksi, "SELECT saldo FROM robotv80_tabungan WHERE id_tabungan='$id_tabungan_penerima'");
-            $penerima = mysqli_fetch_assoc($q);
-
-            if (!$penerima) {
-                $error = "Penerima tidak ditemukan.";
-            } else {
-
-                $saldo_pengirim_baru = $pengirim['saldo'] - $jumlah;
-                $saldo_penerima_baru = $penerima['saldo'] + $jumlah;
-
-                mysqli_query($koneksi, "UPDATE robotv80_tabungan SET saldo='$saldo_pengirim_baru' WHERE id_tabungan='$id_tabungan_pengirim'");
-                mysqli_query($koneksi, "UPDATE robotv80_tabungan SET saldo='$saldo_penerima_baru' WHERE id_tabungan='$id_tabungan_penerima'");
-
-                $tanggal = date('Y-m-d H:i:s');
-
-                mysqli_query($koneksi, "INSERT INTO robotv80_transaksi (id_tabungan, jenis_transaksi, jumlah, tanggal)
-                VALUES ('$id_tabungan_pengirim','Transfer Keluar','$jumlah','$tanggal')");
-
-                mysqli_query($koneksi, "INSERT INTO robotv80_transaksi (id_tabungan, jenis_transaksi, jumlah, tanggal)
-                VALUES ('$id_tabungan_penerima','Transfer Masuk','$jumlah','$tanggal')");
-
-                // AMBIL NAMA PENGIRIM
-                $q1 = mysqli_query($koneksi, "
-                    SELECT k.nama 
-                    FROM robotv80_tabungan t 
-                    JOIN robotv80_karyawan k ON t.id_karyawan = k.id_karyawan
-                    WHERE t.id_tabungan='$id_tabungan_pengirim'
-                ");
-                $nama_pengirim = mysqli_fetch_assoc($q1)['nama'] ?? '-';
-
-                // AMBIL NAMA PENERIMA
-                $q2 = mysqli_query($koneksi, "
-                    SELECT k.nama 
-                    FROM robotv80_tabungan t 
-                    JOIN robotv80_karyawan k ON t.id_karyawan = k.id_karyawan
-                    WHERE t.id_tabungan='$id_tabungan_penerima'
-                ");
-                $nama_penerima = mysqli_fetch_assoc($q2)['nama'] ?? '-';
-
-                $success = "Transfer berhasil.";
-
-                $struk = [
-                    'pengirim' => $nama_pengirim,
-                    'penerima' => $nama_penerima,
-                    'jumlah'   => $jumlah,
-                    'tanggal'  => $tanggal,
-                    'id_pengirim' => $id_tabungan_pengirim,
-                    'id_penerima' => $id_tabungan_penerima
-                ];
-            }
-        }
     }
-}
+    elseif($jumlah <= 0){
 
-// AMBIL TABUNGAN
-function getTabunganOptions($koneksi, $filter = null) {
-    $sql = "SELECT t.id_tabungan, k.nama
+        $error = "Jumlah transfer tidak valid.";
+
+    }
+    elseif($saldo_pengirim < $jumlah){
+
+        $error = "Saldo tidak cukup.";
+
+    }
+    else{
+
+        /* =========================
+           AMBIL DATA PENERIMA
+        ========================= */
+
+        $q_penerima = mysqli_query($koneksi, "
+            SELECT 
+                t.id_tabungan,
+                t.saldo,
+                k.nama
             FROM robotv80_tabungan t
-            JOIN robotv80_karyawan k ON t.id_karyawan=k.id_karyawan";
+            JOIN robotv80_karyawan k
+            ON t.id_karyawan = k.id_karyawan
+            WHERE t.id_tabungan = '$id_tabungan_penerima'
+            LIMIT 1
+        ");
 
-    if ($filter) {
-        $sql .= " WHERE t.id_karyawan='$filter'";
+        $penerima = mysqli_fetch_assoc($q_penerima);
+
+        if(!$penerima){
+
+            $error = "Penerima tidak ditemukan.";
+
+        }else{
+
+            /* =========================
+               HITUNG SALDO BARU
+            ========================= */
+
+            $saldo_pengirim_baru = $saldo_pengirim - $jumlah;
+
+            $saldo_penerima_baru = $penerima['saldo'] + $jumlah;
+
+            /* =========================
+               UPDATE SALDO PENGIRIM
+            ========================= */
+
+            mysqli_query($koneksi, "
+                UPDATE robotv80_tabungan
+                SET saldo = '$saldo_pengirim_baru'
+                WHERE id_tabungan = '$id_tabungan_pengirim'
+            ");
+
+            /* =========================
+               UPDATE SALDO PENERIMA
+            ========================= */
+
+            mysqli_query($koneksi, "
+                UPDATE robotv80_tabungan
+                SET saldo = '$saldo_penerima_baru'
+                WHERE id_tabungan = '$id_tabungan_penerima'
+            ");
+
+            $tanggal = date('Y-m-d H:i:s');
+
+            /* =========================
+               SIMPAN TRANSAKSI
+            ========================= */
+
+            mysqli_query($koneksi, "
+                INSERT INTO robotv80_transaksi
+                (
+                    id_tabungan,
+                    jenis_transaksi,
+                    jumlah,
+                    tanggal,
+                    transfer_ke
+                )
+                VALUES
+                (
+                    '$id_tabungan_pengirim',
+                    'Transfer',
+                    '$jumlah',
+                    '$tanggal',
+                    '{$penerima['nama']}'
+                )
+            ");
+
+            $success = "Transfer berhasil.";
+
+            /* =========================
+               STRUK
+            ========================= */
+
+            $struk = [
+
+                'pengirim' => $nama_pengirim,
+                'penerima' => $penerima['nama'],
+                'jumlah'   => $jumlah,
+                'tanggal'  => $tanggal
+
+            ];
+
+        }
+
     }
 
-    $sql .= " ORDER BY k.nama ASC";
-
-    $res = mysqli_query($koneksi, $sql);
-
-    $data = [];
-    while ($row = mysqli_fetch_assoc($res)) {
-        $data[] = $row;
-    }
-    return $data;
 }
+
+/* =========================
+   LIST PENERIMA
+========================= */
+
+$res = mysqli_query($koneksi, "
+    SELECT 
+        t.id_tabungan,
+        t.saldo,
+        k.nama
+    FROM robotv80_tabungan t
+    JOIN robotv80_karyawan k
+    ON t.id_karyawan = k.id_karyawan
+    WHERE t.id_karyawan != '$id_karyawan'
+    ORDER BY k.nama ASC
+");
+
 ?>
 
 <!DOCTYPE html>
 <html>
 <head>
+
 <meta charset="UTF-8">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
- <title>myROBOT-V80</title>
-  <link href="http://10.10.20.250/dashboard/APPS-ROBOT/BUILDING APLIKASI/@API-GITHUB-V80/ROBOT-GITHUB/ROBOTV80.png" rel="icon" type="image/png" />
+
+<title>myROBOT-V80</title>
+
+<link rel="icon" type="image/png"
+href="http://10.10.20.250/dashboard/APPS-ROBOT/BUILDING%20APLIKASI/@API-GITHUB-V80/ROBOT-GITHUB/ROBOTV80.png">
 
 <style>
+
 body{
-    font-family: Arial;
-    background: linear-gradient(135deg,#0f172a,#2563eb);
     margin:0;
+    font-family:Arial;
+    background:linear-gradient(135deg,#0f172a,#2563eb);
+    padding:20px;
 }
 
 .container{
     max-width:500px;
-    margin:40px auto;
-    background:#fff;
+    margin:auto;
+    background:white;
     padding:25px;
-    border-radius:15px;
+    border-radius:20px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.2);
 }
 
-h2{text-align:center}
-
-label{font-weight:bold; display:block; margin-top:10px}
-
-select,input{
-    width:100%;
-    padding:10px;
-    margin-top:5px;
-    border-radius:8px;
-    border:1px solid #ccc;
+h2{
+    text-align:center;
+    margin-bottom:20px;
 }
 
-button,input[type=submit]{
-    width:100%;
-    margin-top:15px;
-    padding:10px;
-    background:#2563eb;
-    color:#fff;
-    border:none;
-    border-radius:8px;
-    cursor:pointer;
-}
-
-button:hover,input[type=submit]:hover{
-    background:#1e40af;
-}
-
-.alert{
-    padding:10px;
-    margin-top:10px;
-    border-radius:8px;
-}
-
-.error{background:#fee2e2}
-.success{background:#dcfce7}
-
-#struk{
-    margin-top:15px;
+.info-box{
+    background:#f1f5f9;
     padding:15px;
-    border:1px dashed #000;
-    background:#f9f9f9;
+    border-radius:12px;
+    margin-bottom:15px;
+    line-height:1.8;
 }
+
+label{
+    display:block;
+    margin-top:12px;
+    font-weight:bold;
+}
+
+select,
+input{
+    width:100%;
+    padding:12px;
+    border:1px solid #ccc;
+    border-radius:10px;
+    margin-top:5px;
+    font-size:14px;
+}
+
+.btn{
+    width:100%;
+    padding:12px;
+    border:none;
+    border-radius:10px;
+    margin-top:15px;
+    font-size:15px;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+.btn-transfer{
+    background:#2563eb;
+    color:white;
+}
+
+.btn-transfer:hover{
+    background:#1d4ed8;
+}
+
 .btn-back{
     display:block;
     text-align:center;
-    margin-top:10px;
-    padding:10px;
+    text-decoration:none;
     background:#6b7280;
     color:white;
-    text-decoration:none;
-    border-radius:8px;
-    transition:0.3s;
 }
 
 .btn-back:hover{
     background:#4b5563;
-    transform: translateY(-2px);
 }
-</style>
-</head>
 
+.alert{
+    padding:12px;
+    border-radius:10px;
+    margin-bottom:15px;
+}
+
+.error{
+    background:#fee2e2;
+    color:#991b1b;
+}
+
+.success{
+    background:#dcfce7;
+    color:#166534;
+}
+
+.struk{
+    margin-top:20px;
+    padding:15px;
+    border:2px dashed #000;
+    border-radius:10px;
+    background:#fafafa;
+}
+
+.struk h3{
+    text-align:center;
+    margin-bottom:15px;
+}
+
+.struk p{
+    margin:8px 0;
+}
+
+.print-btn{
+    width:100%;
+    padding:12px;
+    background:#16a34a;
+    color:white;
+    border:none;
+    border-radius:10px;
+    margin-top:15px;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+.bottom-nav{
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+    background:white;
+    display:flex;
+    justify-content:space-around;
+    padding:12px 0;
+    box-shadow:0 -5px 20px rgba(0,0,0,0.1);
+}
+
+.bottom-nav a{
+    text-decoration:none;
+    font-size:24px;
+}
+
+@media(max-width:768px){
+
+    body{
+        padding:10px;
+        padding-bottom:90px;
+    }
+
+    .container{
+        padding:15px;
+    }
+
+}
+
+</style>
+
+</head>
 <body>
 
 <div class="container">
-<h2>Transfer Antar Karyawan</h2>
 
-<?php if($error): ?>
-<div class="alert error"><?= $error ?></div>
-<?php endif; ?>
+<h2>TRANSFER SALDO</h2>
 
-<?php if($success): ?>
-<div class="alert success"><?= $success ?></div>
-<?php endif; ?>
+<div class="info-box">
+
+<b>Pengirim :</b> <?= $nama_pengirim; ?> <br>
+
+<b>ID Tabungan :</b> <?= $id_tabungan_pengirim; ?> <br>
+
+<b>Saldo :</b> Rp <?= number_format($saldo_pengirim,0,',','.'); ?>
+
+</div>
+
+<?php if($error){ ?>
+
+<div class="alert error">
+    <?= $error; ?>
+</div>
+
+<?php } ?>
+
+<?php if($success){ ?>
+
+<div class="alert success">
+    <?= $success; ?>
+</div>
+
+<?php } ?>
 
 <form method="POST">
 
-<label>Pengirim</label>
-<select name="id_tabungan_pengirim" required>
-<?php
-$opt = isset($_SESSION['id_admin'])
-    ? getTabunganOptions($koneksi)
-    : getTabunganOptions($koneksi, $_SESSION['id_karyawan']);
+<label>Pilih Penerima</label>
 
-foreach($opt as $o){
-    echo "<option value='{$o['id_tabungan']}'>{$o['id_tabungan']} - {$o['nama']}</option>";
-}
-?>
-</select>
-
-<label>Penerima</label>
 <select name="id_tabungan_penerima" required>
-<?php
-$opt2 = getTabunganOptions($koneksi);
-foreach($opt2 as $o){
-    echo "<option value='{$o['id_tabungan']}'>{$o['id_tabungan']} - {$o['nama']}</option>";
-}
-?>
+
+<option value="">-- Pilih Penerima --</option>
+
+<?php while($o = mysqli_fetch_assoc($res)){ ?>
+
+<option value="<?= $o['id_tabungan']; ?>">
+
+<?= $o['id_tabungan']; ?>
+-
+<?= $o['nama']; ?>
+
+| Saldo :
+Rp <?= number_format($o['saldo'],0,',','.'); ?>
+
+</option>
+
+<?php } ?>
+
 </select>
 
-<label>Jumlah</label>
+<label>Jumlah Transfer</label>
+
 <input type="number" name="jumlah" required>
 
-<input type="submit" name="submit" value="Transfer">
-<a href="data_transaksi_karyawan.php" class="btn-back">← Kembali</a>
+<button type="submit" name="submit" class="btn btn-transfer">
+    TRANSFER SEKARANG
+</button>
+
+<a href="karyawan.php" class="btn btn-back">
+    ← Kembali
+</a>
+
 </form>
 
-<?php if($struk): ?>
-<div id="struk">
+<?php if($struk){ ?>
+
+<div class="struk">
+
 <h3>STRUK TRANSFER</h3>
-<hr>
-<p>Tanggal: <?= $struk['tanggal'] ?></p>
-<p>Pengirim: <?= $struk['pengirim'] ?> (<?= $struk['id_pengirim'] ?>)</p>
-<p>Penerima: <?= $struk['penerima'] ?> (<?= $struk['id_penerima'] ?>)</p>
-<p>Jumlah: Rp <?= number_format($struk['jumlah'],0,',','.') ?></p>
-<hr>
-<p style="text-align:center">✔ BERHASIL</p>
 
-<button onclick="printStruk()">PRINT</button>
+<p>
+<b>Pengirim :</b>
+<?= $struk['pengirim']; ?>
+</p>
+
+<p>
+<b>Penerima :</b>
+<?= $struk['penerima']; ?>
+</p>
+
+<p>
+<b>Jumlah :</b>
+Rp <?= number_format($struk['jumlah'],0,',','.'); ?>
+</p>
+
+<p>
+<b>Tanggal :</b>
+<?= $struk['tanggal']; ?>
+</p>
+
+<button onclick="window.print()" class="print-btn">
+    PRINT STRUK
+</button>
+
 </div>
-<?php endif; ?>
+
+<?php } ?>
 
 </div>
 
-<script>
-function printStruk(){
-    let printContent = document.getElementById('struk').innerHTML;
-    let original = document.body.innerHTML;
+<div class="bottom-nav">
 
-    document.body.innerHTML = printContent;
-    window.print();
-    document.body.innerHTML = original;
-    location.reload();
-}
-</script>
+<a href="karyawan.php">🏠</a>
+
+<a href="transfer.php">💸</a>
+
+<a href="data_transaksi_karyawan.php">📊</a>
+
+<a href="edit_profile_karyawan.php">👤</a>
+
+</div>
 
 </body>
 </html>

@@ -1,312 +1,879 @@
 <?php
+
 session_start();
-if (!isset($_SESSION['id_karyawan'])) {
-  header('Location: login.php');
-  exit;
+
+if (!isset($_SESSION['id_karyawan']) || $_SESSION['level'] != 'karyawan') {
+    header("Location: login.php");
+    exit;
 }
 
-require 'koneksi.php';
+/*
+|--------------------------------------------------------------------------
+| KONEKSI DATABASE
+|--------------------------------------------------------------------------
+*/
+
+$host = "10.10.20.250";
+$user = "root";
+$pass = "";
+$db   = "sikdraisyah";
+
+$koneksi = mysqli_connect($host, $user, $pass, $db);
+
+if (!$koneksi) {
+    die("Koneksi gagal : " . mysqli_connect_error());
+}
+
+/*
+|--------------------------------------------------------------------------
+| SESSION LOGIN
+|--------------------------------------------------------------------------
+*/
 
 $id_karyawan = $_SESSION['id_karyawan'];
 
-/* FILTER + PAGINATION */
-$from = $_GET['from'] ?? '';
-$to   = $_GET['to'] ?? '';
-$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+/*
+|--------------------------------------------------------------------------
+| FILTER TANGGAL
+|--------------------------------------------------------------------------
+*/
 
-if ($page < 1) $page = 1;
+$dari   = isset($_GET['dari']) ? $_GET['dari'] : '';
+$sampai = isset($_GET['sampai']) ? $_GET['sampai'] : '';
 
-$limit = 10;
-$offset = ($page - 1) * $limit;
+$where_tanggal = "";
 
-/* WHERE */
-$where = "WHERE tb.id_karyawan = '$id_karyawan'";
+if(!empty($dari) && !empty($sampai)){
 
-if (!empty($from) && !empty($to)) {
-    $where .= " AND DATE(tr.tanggal) BETWEEN '$from' AND '$to'";
+    $where_tanggal = "
+    AND DATE(t.tanggal)
+    BETWEEN '$dari' AND '$sampai'
+    ";
+
 }
 
-/* COUNT */
-$count_sql = "SELECT COUNT(*) as total
-              FROM robotv80_transaksi tr
-              JOIN robotv80_tabungan tb ON tr.id_tabungan = tb.id_tabungan
-              $where";
+/*
+|--------------------------------------------------------------------------
+| PAGINATION
+|--------------------------------------------------------------------------
+*/
 
-$count_result = mysqli_query($koneksi, $count_sql);
-$total_row = mysqli_fetch_assoc($count_result)['total'];
-$total_page = ceil($total_row / $limit);
+$batas = 5;
 
-/* =========================
-   QUERY UTAMA (FIX PENERIMA)
-========================= */
-$sql = "SELECT 
-            tr.id_transaksi,
-            tr.id_tabungan,
-            tr.jenis_transaksi,
-            tr.jumlah,
-            tr.tanggal,
-            tr.transfer_ke,
-            k.nama,
-            k.jabatan,
-            tb.saldo,
+$halaman = isset($_GET['halaman']) ? (int)$_GET['halaman'] : 1;
 
-            /* ✅ INI YANG BENAR UNTUK NAMA PENERIMA */
-            kp.nama AS nama_penerima
-
-        FROM robotv80_transaksi tr
-        JOIN robotv80_tabungan tb ON tr.id_tabungan = tb.id_tabungan
-        JOIN robotv80_karyawan k ON tb.id_karyawan = k.id_karyawan
-
-        /* PENERIMA HARUS DARI transfer_ke -> tabungan -> karyawan */
-        LEFT JOIN robotv80_tabungan tbp ON tr.transfer_ke = tbp.id_tabungan
-        LEFT JOIN robotv80_karyawan kp ON tbp.id_karyawan = kp.id_karyawan
-
-        $where
-        ORDER BY tr.tanggal DESC
-        LIMIT $limit OFFSET $offset";
-
-$result = mysqli_query($koneksi, $sql);
-
-/* FORMAT */
-function formatJenisTransaksi($row) {
-
-    if ($row['jenis_transaksi'] == 'Transfer Keluar') {
-        return "Transfer ke " . ($row['nama_penerima'] ?? '-');
-    }
-
-    if ($row['jenis_transaksi'] == 'Transfer Masuk') {
-        return "Transfer dari " . ($row['nama_penerima'] ?? '-');
-    }
-
-    return $row['jenis_transaksi'];
+if($halaman < 1){
+    $halaman = 1;
 }
+
+$mulai = ($halaman - 1) * $batas;
+
+/*
+|--------------------------------------------------------------------------
+| TOTAL DATA
+|--------------------------------------------------------------------------
+*/
+
+$total_query = mysqli_query($koneksi, "
+
+SELECT COUNT(*) as total
+
+FROM robotv80_transaksi t
+
+LEFT JOIN robotv80_tabungan tb
+ON t.id_tabungan = tb.id_tabungan
+
+WHERE 
+tb.id_karyawan = '$id_karyawan'
+OR t.transfer_ke = (
+    SELECT nama 
+    FROM robotv80_karyawan 
+    WHERE id_karyawan = '$id_karyawan'
+)
+
+$where_tanggal
+
+");
+
+$total_data = mysqli_fetch_assoc($total_query);
+
+$total = $total_data['total'];
+
+$total_halaman = ceil($total / $batas);
+
+/*
+|--------------------------------------------------------------------------
+| QUERY DATA TRANSAKSI
+|--------------------------------------------------------------------------
+|
+| transfer_ke sekarang berisi NAMA TUJUAN
+|
+*/
+
+$query = mysqli_query($koneksi, "
+
+SELECT
+
+    t.id_transaksi,
+    t.id_tabungan,
+    t.jenis_transaksi,
+    t.jumlah,
+    t.transfer_ke,
+    t.tanggal,
+
+    tb.id_karyawan,
+    tb.saldo,
+
+    pengirim.nama AS nama_pengirim,
+    pengirim.jabatan,
+    pengirim.no_tlp,
+
+    tujuan.nama AS nama_tujuan
+
+FROM robotv80_transaksi t
+
+LEFT JOIN robotv80_tabungan tb
+ON t.id_tabungan = tb.id_tabungan
+
+/*
+|--------------------------------------------------------------------------
+| DATA PENGIRIM
+|--------------------------------------------------------------------------
+*/
+
+LEFT JOIN robotv80_karyawan pengirim
+ON tb.id_karyawan = pengirim.id_karyawan
+
+/*
+|--------------------------------------------------------------------------
+| DATA TUJUAN TRANSFER
+|--------------------------------------------------------------------------
+|
+| transfer_ke = nama karyawan
+|
+*/
+
+LEFT JOIN robotv80_karyawan tujuan
+ON t.transfer_ke = tujuan.nama
+
+WHERE
+
+tb.id_karyawan = '$id_karyawan'
+
+OR t.transfer_ke = (
+    SELECT nama 
+    FROM robotv80_karyawan 
+    WHERE id_karyawan = '$id_karyawan'
+)
+
+$where_tanggal
+
+ORDER BY t.id_transaksi DESC
+
+LIMIT $mulai, $batas
+
+");
+
+/*
+|--------------------------------------------------------------------------
+| NOTIFIKASI TRANSAKSI TERBARU
+|--------------------------------------------------------------------------
+*/
+
+$cek_notif = mysqli_query($koneksi, "
+
+SELECT *
+
+FROM robotv80_transaksi t
+
+LEFT JOIN robotv80_tabungan tb
+ON t.id_tabungan = tb.id_tabungan
+
+WHERE
+tb.id_karyawan = '$id_karyawan'
+
+OR t.transfer_ke = (
+    SELECT nama 
+    FROM robotv80_karyawan 
+    WHERE id_karyawan = '$id_karyawan'
+)
+
+ORDER BY t.id_transaksi DESC
+
+LIMIT 1
+
+");
+
+$notif = mysqli_fetch_assoc($cek_notif);
+
+/*
+|--------------------------------------------------------------------------
+| AMBIL NAMA LOGIN
+|--------------------------------------------------------------------------
+*/
+
+$get_user = mysqli_query($koneksi, "
+SELECT nama
+FROM robotv80_karyawan
+WHERE id_karyawan = '$id_karyawan'
+");
+
+$user_login = mysqli_fetch_assoc($get_user);
+
+$nama_login = $user_login['nama'];
+
 ?>
 
 <!DOCTYPE html>
-<html lang="id">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
- <title>myROBOT-V80</title>
-  <link href="http://10.10.20.250/dashboard/APPS-ROBOT/BUILDING APLIKASI/@API-GITHUB-V80/ROBOT-GITHUB/ROBOTV80.png" rel="icon" type="image/png" />
 
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>myROBOT-V80</title>
+
+<link rel="icon" type="image/png"
+href="http://10.10.20.250/dashboard/APPS-ROBOT/BUILDING%20APLIKASI/@API-GITHUB-V80/ROBOT-GITHUB/ROBOTV80.png">
+
+<meta http-equiv="refresh" content="30">
 
 <style>
-body {
-  margin:0;
-  font-family:'Segoe UI',sans-serif;
-  background: linear-gradient(135deg,#0f172a,#1e3a8a,#2563eb);
-  color:#fff;
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
 }
 
-
-
-.container {
-  max-width:1100px;
-  margin:40px auto;
-  background:rgba(255,255,255,0.12);
-  backdrop-filter:blur(14px);
-  padding:25px;
-  border-radius:18px;
-}
-
-nav a {
-  margin:5px;
-  padding:10px 14px;
-  background:rgba(255,255,255,0.15);
-  color:#fff;
-  text-decoration:none;
-  border-radius:10px;
-}
-
-form {
-  text-align:center;
-  margin-bottom:15px;
-}
-
-input, button {
-  padding:8px;
-  border-radius:8px;
-  border:none;
-}
-
-button {
-  background:#22c55e;
-  color:#fff;
-}
-
-table {
-  width:100%;
-  border-collapse:collapse;
-  background:#fff;
-  color:#000;
-  border-radius:10px;
-  overflow:hidden;
-}
-
-th {
-  background:#2563eb;
-  color:#fff;
-  padding:12px;
-}
-
-td {
-  padding:10px;
-  text-align:center;
-  border-bottom:1px solid #eee;
-}
-
-.pagination {
-  text-align:center;
-  margin-top:15px;
-}
-
-.pagination a {
-  padding:8px 12px;
-  margin:0 5px;
-  background:rgba(255,255,255,0.2);
-  color:#fff;
-  text-decoration:none;
-  border-radius:8px;
+body{
+    background:#edf1f7;
+    font-family:Arial, sans-serif;
+    padding:15px;
 }
 
 /* =========================
-   RESPONSIVE HP
+   CONTAINER
 ========================= */
-@media (max-width: 768px) {
 
-  .container {
-    margin: 15px;
-    padding: 15px;
-  }
-
-  h2 {
-    font-size: 18px;
-  }
-
-  /* TABLE SCROLL */
-  table {
-    display: block;
-    overflow-x: auto;
-    white-space: nowrap;
-  }
-
-  th, td {
-    font-size: 12px;
-    padding: 8px;
-  }
-
-  nav {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-
-  nav a {
-    font-size: 12px;
-    padding: 8px 10px;
-  }
-
-  input, button {
-    width: 100%;
-    margin-top: 5px;
-  }
-
-  form {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-  }
+.container{
+    width:100%;
+    background:white;
+    border-radius:15px;
+    padding:15px;
+    box-shadow:0 5px 15px rgba(0,0,0,0.08);
+    overflow:hidden;
 }
-</style>
-</head>
 
+h2{
+    margin-bottom:20px;
+    color:#333;
+    font-size:22px;
+}
+
+/* =========================
+   FILTER
+========================= */
+
+.filter-box{
+    background:#f8f9fa;
+    padding:15px;
+    border-radius:10px;
+    margin-bottom:20px;
+}
+
+.filter-box form{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+}
+
+.filter-box label{
+    font-size:14px;
+    font-weight:bold;
+}
+
+input[type=date]{
+    padding:10px;
+    border:1px solid #ccc;
+    border-radius:8px;
+    width:180px;
+}
+
+/* =========================
+   BUTTON
+========================= */
+
+button{
+    padding:10px 18px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    font-weight:bold;
+    transition:0.2s;
+}
+
+button:hover{
+    opacity:0.9;
+}
+
+.btn-filter{
+    background:#007bff;
+    color:white;
+}
+
+.btn-print{
+    background:#28a745;
+    color:white;
+}
+
+.btn-reset{
+    background:#dc3545;
+    color:white;
+    text-decoration:none;
+    padding:10px 18px;
+    border-radius:8px;
+    font-size:14px;
+}
+
+/* =========================
+   TABLE
+========================= */
+
+.table-wrapper{
+    width:100%;
+    overflow-x:auto;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:800px;
+}
+
+table th{
+    background:#007bff;
+    color:white;
+    padding:14px;
+    border:1px solid #ddd;
+    font-size:14px;
+}
+
+table td{
+    padding:12px;
+    border:1px solid #ddd;
+    font-size:14px;
+}
+
+table tr:nth-child(even){
+    background:#f9f9f9;
+}
+
+table tr:hover{
+    background:#eef5ff;
+}
+
+/* =========================
+   STATUS
+========================= */
+
+.setor{
+    color:green;
+    font-weight:bold;
+}
+
+.tarik{
+    color:red;
+    font-weight:bold;
+}
+
+.transfer{
+    color:orange;
+    font-weight:bold;
+}
+
+.badge{
+    background:#28a745;
+    color:white;
+    padding:6px 12px;
+    border-radius:20px;
+    font-size:12px;
+    display:inline-block;
+}
+
+.transfer-box{
+    background:#ffc107;
+    color:black;
+    padding:6px 12px;
+    border-radius:20px;
+    font-size:12px;
+    font-weight:bold;
+    display:inline-block;
+}
+
+.masuk{
+    background:#17a2b8;
+    color:white;
+    padding:5px 10px;
+    border-radius:20px;
+    font-size:11px;
+    font-weight:bold;
+    display:inline-block;
+}
+
+.keluar{
+    background:#dc3545;
+    color:white;
+    padding:5px 10px;
+    border-radius:20px;
+    font-size:11px;
+    font-weight:bold;
+    display:inline-block;
+}
+
+.nominal{
+    color:#007bff;
+    font-weight:bold;
+}
+
+.kosong{
+    text-align:center;
+    color:red;
+    padding:20px;
+}
+
+/* =========================
+   PAGINATION
+========================= */
+
+.pagination{
+    margin-top:25px;
+    display:flex;
+    justify-content:center;
+    gap:8px;
+    flex-wrap:wrap;
+}
+
+.pagination a{
+    text-decoration:none;
+    padding:10px 15px;
+    background:#007bff;
+    color:white;
+    border-radius:8px;
+    font-size:14px;
+    transition:0.2s;
+}
+
+.pagination a:hover{
+    background:#0056b3;
+}
+
+.pagination .active{
+    background:#28a745;
+}
+
+/* =========================
+   FOOTER
+========================= */
+
+.footer{
+    margin-top:20px;
+    text-align:right;
+}
+
+/* =========================
+   BOTTOM NAVIGATION
+========================= */
+
+.bottom-nav{
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+    background:white;
+    display:flex;
+    justify-content:space-around;
+    align-items:center;
+    padding:10px 0;
+    border-top:1px solid #ddd;
+    box-shadow:0 -5px 20px rgba(0,0,0,0.08);
+    z-index:999;
+}
+
+.bottom-nav a{
+    text-decoration:none;
+    font-size:24px;
+    padding:10px;
+    border-radius:12px;
+    transition:0.2s;
+}
+
+.bottom-nav a:hover{
+    background:#f1f1f1;
+}
+
+.bottom-nav a:active{
+    background:#e0e7ff;
+    transform:scale(0.92);
+}
+.table-wrapper{
+    width:100%;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+}
+
+table{
+    min-width:900px;
+}
+
+/* =========================
+   RESPONSIVE MOBILE
+========================= */
+
+@media(max-width:768px){
+
+    body{
+        padding:10px;
+        padding-bottom:90px;
+    }
+
+    .container{
+        padding:12px;
+        border-radius:12px;
+    }
+
+    h2{
+        font-size:18px;
+        text-align:center;
+    }
+
+    .filter-box form{
+        flex-direction:column;
+        align-items:stretch;
+    }
+
+    input[type=date]{
+        width:100%;
+    }
+
+    .btn-filter,
+    .btn-reset,
+    .btn-print{
+        width:100%;
+        text-align:center;
+    }
+
+    table th,
+    table td{
+        font-size:12px;
+        padding:10px;
+    }
+
+    .pagination a{
+        padding:8px 12px;
+        font-size:12px;
+    }
+
+    .bottom-nav a{
+        font-size:22px;
+    }
+
+    .footer{
+        text-align:center;
+    }
+
+}
+
+/* =========================
+   PRINT
+========================= */
+
+@media print{
+
+    .filter-box,
+    .footer,
+    .pagination,
+    .bottom-nav{
+        display:none;
+    }
+
+    body{
+        background:white;
+        padding:0;
+    }
+
+    .container{
+        box-shadow:none;
+    }
+
+}
+
+
+</style>
+
+</head>
 <body>
 
 <div class="container">
 
-<h2 style="text-align:center;">Data Transaksi Karyawan</h2>
+<h2>RIWAYAT TRANSAKSI NASABAH</h2>
 
-<nav>
-  <a href="karyawan.php">Dashboard</a>
-  <a href="transfer.php">Transfer</a>
-  <a href="data_transaksi_karyawan.php">Refresh</a>
-</nav>
+<div class="filter-box">
 
 <form method="GET">
-  Dari:
-  <input type="date" name="from" value="<?= $from ?>">
 
-  Sampai:
-  <input type="date" name="to" value="<?= $to ?>">
+<label>Dari :</label>
 
-  <button type="submit">Cari</button>
+<input type="date" name="dari" value="<?= $dari; ?>">
+
+<label>Sampai :</label>
+
+<input type="date" name="sampai" value="<?= $sampai; ?>">
+
+<button type="submit" class="btn-filter">
+    Filter
+</button>
+
+<a href="data_transaksi_karyawan.php" class="btn-reset">
+    Reset
+</a>
+
+<a href="karyawan.php" class="btn-reset">
+    Kembali
+</a>
+
 </form>
 
+</div>
+<div class="table-wrapper">
 <table>
-<thead>
+
 <tr>
-  <th>ID</th>
-  <th>Tabungan</th>
-  <th>Nama</th>
-  <th>Jabatan</th>
-  <th>Jenis</th>
-  <th>Jumlah</th>
-  <th>Sisa Saldo</th>
-  <th>Penerima</th>
-  <th>Tanggal</th>
-  <th>Aksi</th>
+
+<th>No</th>
+<th>ID</th>
+<th>Pengirim</th>
+<th>Jenis</th>
+<th>Jumlah</th>
+<th>Transfer Ke</th>
+<th>Status</th>
+<th>Tanggal</th>
+
 </tr>
-</thead>
 
-<tbody>
+<?php
 
-<?php if(mysqli_num_rows($result) > 0): ?>
-<?php while($row = mysqli_fetch_assoc($result)): ?>
+if(mysqli_num_rows($query) > 0){
+
+    $no = $mulai + 1;
+
+    while($data = mysqli_fetch_array($query)){
+
+        $jenis = strtolower($data['jenis_transaksi']);
+
+?>
+
 <tr>
-  <td><?= $row['id_transaksi']; ?></td>
-  <td><?= $row['id_tabungan']; ?></td>
-  <td><?= htmlspecialchars($row['nama']); ?></td>
-  <td><?= htmlspecialchars($row['jabatan']); ?></td>
 
-  <td><?= formatJenisTransaksi($row); ?></td>
+<td><?= $no++; ?></td>
 
-  <td>Rp <?= number_format($row['jumlah'],0,',','.'); ?></td>
-  <td>Rp <?= number_format($row['saldo'],0,',','.'); ?></td>
+<td><?= $data['id_transaksi']; ?></td>
 
-  <!-- ✅ INI FIX PENERIMA -->
-  <td><?= htmlspecialchars($row['nama_penerima'] ?? '-') ?></td>
+<td>
 
-  <td><?= date('d-m-Y H:i', strtotime($row['tanggal'])); ?></td>
+<span class="badge">
+    <?= $data['nama_pengirim']; ?>
+</span>
 
-  <td>
-    <a href="struk.php?id=<?= $row['id_transaksi']; ?>" target="_blank"
-       style="padding:6px 10px;background:#f59e0b;color:#000;border-radius:6px;text-decoration:none;">
-       Cetak Struk
-    </a>
-  </td>
+</td>
+
+<td class="<?= $jenis; ?>">
+    <?= $data['jenis_transaksi']; ?>
+</td>
+
+<td class="nominal">
+    Rp <?= number_format($data['jumlah'],0,',','.'); ?>
+</td>
+
+<td>
+
+<?php
+
+if($data['jenis_transaksi'] == 'Transfer'){
+
+    echo "
+    <span class='transfer-box'>
+        ".$data['transfer_ke']."
+    </span>
+    ";
+
+}else{
+
+    echo "-";
+
+}
+
+?>
+
+</td>
+
+<td>
+
+<?php
+
+/*
+|--------------------------------------------------------------------------
+| STATUS TRANSFER
+|--------------------------------------------------------------------------
+*/
+
+if(
+    $data['jenis_transaksi'] == 'Transfer'
+    &&
+    $data['transfer_ke'] == $nama_login
+){
+
+    echo "
+    <span class='masuk'>
+        Transfer Masuk
+    </span>
+    ";
+
+}else if($data['jenis_transaksi'] == 'Transfer'){
+
+    echo "
+    <span class='keluar'>
+        Transfer Keluar
+    </span>
+    ";
+
+}else{
+
+    echo "-";
+
+}
+
+?>
+
+</td>
+
+<td>
+    <?= date('d-m-Y H:i:s', strtotime($data['tanggal'])); ?>
+</td>
+
 </tr>
-<?php endwhile; ?>
-<?php else: ?>
+
+<?php
+
+    }
+
+}else{
+
+?>
+
 <tr>
-  <td colspan="10">Tidak ada data</td>
-</tr>
-<?php endif; ?>
 
-</tbody>
+<td colspan="8" class="kosong">
+    Data transaksi tidak ditemukan
+</td>
+
+</tr>
+
+<?php } ?>
+
 </table>
 
+<!-- PAGINATION -->
+
 <div class="pagination">
-<?php if($page > 1): ?>
-  <a href="?from=<?= $from ?>&to=<?= $to ?>&page=<?= $page-1 ?>">⬅ Prev</a>
-<?php endif; ?>
 
-Page <?= $page ?> / <?= $total_page ?>
+<?php if($halaman > 1){ ?>
 
-<?php if($page < $total_page): ?>
-  <a href="?from=<?= $from ?>&to=<?= $to ?>&page=<?= $page+1 ?>">Next ➡</a>
-<?php endif; ?>
+<a href="?halaman=<?= $halaman-1; ?>&dari=<?= $dari; ?>&sampai=<?= $sampai; ?>">
+    Prev
+</a>
+
+<?php } ?>
+
+<?php
+
+for($i=1; $i <= $total_halaman; $i++){
+
+    $active = ($i == $halaman) ? 'active' : '';
+
+    echo "
+    <a class='$active'
+    href='?halaman=$i&dari=$dari&sampai=$sampai'>
+        $i
+    </a>
+    ";
+
+}
+
+?>
+
+<?php if($halaman < $total_halaman){ ?>
+
+<a href="?halaman=<?= $halaman+1; ?>&dari=<?= $dari; ?>&sampai=<?= $sampai; ?>">
+    Next
+</a>
+
+<?php } ?>
+
 </div>
+
+<div class="footer">
+
+<button onclick="window.print()" class="btn-print">
+    Cetak
+</button>
+
+</div>
+
+</div>
+
+<script>
+
+window.onload = function(){
+
+    let transaksiBaru = "<?= $notif['id_transaksi']; ?>";
+
+    let transaksiLama = localStorage.getItem("last_transaksi");
+
+    if(transaksiBaru != transaksiLama){
+
+        let jenis  = "<?= $notif['jenis_transaksi']; ?>";
+        let jumlah = "<?= number_format($notif['jumlah'],0,',','.'); ?>";
+
+        alert(
+            "🔔 TRANSAKSI BARU\n\n" +
+            "Jenis : " + jenis + "\n" +
+            "Jumlah : Rp " + jumlah
+        );
+
+        localStorage.setItem("last_transaksi", transaksiBaru);
+
+    }
+
+}
+
+</script>
+
+<!-- =========================
+     BOTTOM NAV
+========================= -->
+
+<div class="bottom-nav">
+
+    <a href="karyawan.php">🏠</a>
+
+    <a href="transfer.php">💸</a>
+
+    <a href="data_transaksi_karyawan.php">📊</a>
+
+    <a href="edit_profile_karyawan.php">👤</a>
 
 </div>
 

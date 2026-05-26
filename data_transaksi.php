@@ -14,50 +14,55 @@ require 'koneksi.php';
 
 $batas = 10;
 
-$halaman = isset($_GET['halaman'])
-? (int)$_GET['halaman']
-: 1;
+$halaman = isset($_GET['halaman']) ? (int)$_GET['halaman'] : 1;
 
-if($halaman < 1){
+if ($halaman < 1) {
     $halaman = 1;
 }
 
 $mulai = ($halaman - 1) * $batas;
 
 /* =========================
-   PENCARIAN
+   SEARCH + FILTER
 ========================= */
 
-$cari = isset($_GET['cari'])
-? mysqli_real_escape_string($koneksi, $_GET['cari'])
+$cari = isset($_GET['cari']) 
+? mysqli_real_escape_string($koneksi, $_GET['cari']) 
 : '';
+
+$jenis_filter = isset($_GET['jenis']) 
+? mysqli_real_escape_string($koneksi, $_GET['jenis']) 
+: '';
+
+/* =========================
+   WHERE QUERY (FIXED)
+========================= */
+
+$where = "
+(
+    LOWER(k.nama) LIKE LOWER('%$cari%')
+    OR LOWER(tr.jenis_transaksi) LIKE LOWER('%$cari%')
+    OR tr.id_tabungan LIKE '%$cari%'
+)
+AND (
+    '$jenis_filter' = ''
+    OR LOWER(tr.jenis_transaksi) = LOWER('$jenis_filter')
+)
+";
 
 /* =========================
    TOTAL DATA
 ========================= */
 
 $query_total = "
-
 SELECT COUNT(*) as total
-
 FROM robotv80_transaksi tr
-
-JOIN robotv80_tabungan tb
-ON tr.id_tabungan = tb.id_tabungan
-
-JOIN robotv80_karyawan k
-ON tb.id_karyawan = k.id_karyawan
-
-WHERE
-
-k.nama LIKE '%$cari%'
-OR tr.jenis_transaksi LIKE '%$cari%'
-OR tr.id_tabungan LIKE '%$cari%'
-
+JOIN robotv80_tabungan tb ON tr.id_tabungan = tb.id_tabungan
+JOIN robotv80_karyawan k ON tb.id_karyawan = k.id_karyawan
+WHERE $where
 ";
 
 $total_result = mysqli_query($koneksi, $query_total);
-
 $total_data = mysqli_fetch_assoc($total_result)['total'];
 
 $total_halaman = ceil($total_data / $batas);
@@ -67,7 +72,6 @@ $total_halaman = ceil($total_data / $batas);
 ========================= */
 
 $sql = "
-
 SELECT 
 tr.id_transaksi,
 tr.jenis_transaksi,
@@ -76,25 +80,12 @@ tr.tanggal,
 tr.id_tabungan,
 k.nama,
 tb.saldo
-
 FROM robotv80_transaksi tr
-
-JOIN robotv80_tabungan tb
-ON tr.id_tabungan = tb.id_tabungan
-
-JOIN robotv80_karyawan k
-ON tb.id_karyawan = k.id_karyawan
-
-WHERE
-
-k.nama LIKE '%$cari%'
-OR tr.jenis_transaksi LIKE '%$cari%'
-OR tr.id_tabungan LIKE '%$cari%'
-
+JOIN robotv80_tabungan tb ON tr.id_tabungan = tb.id_tabungan
+JOIN robotv80_karyawan k ON tb.id_karyawan = k.id_karyawan
+WHERE $where
 ORDER BY tr.id_transaksi DESC
-
 LIMIT $mulai, $batas
-
 ";
 
 $result = mysqli_query($koneksi, $sql);
@@ -103,136 +94,75 @@ if (!$result) {
     die("Query Error : " . mysqli_error($koneksi));
 }
 
-/* =========================
-   NOMOR URUT
-========================= */
-
 $no = $mulai + 1;
-
 ?>
 
 <!DOCTYPE html>
 <html>
 <head>
-
-<meta name="viewport"
-content="width=device-width, initial-scale=1.0">
-
-<title>myROBOT-V80</title>
-
-<link href="http://10.10.20.250/dashboard/APPS-ROBOT/BUILDING APLIKASI/@API-GITHUB-V80/ROBOT-GITHUB/ROBOTV80.png"
-rel="icon"
-type="image/png" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>myROBOT-V80</title>
+  <link href="http://10.10.20.250/dashboard/APPS-ROBOT/BUILDING APLIKASI/@API-GITHUB-V80/ROBOT-GITHUB/ROBOTV80.png" rel="icon" type="image/png" />
 
 <style>
-
 body{
-    font-family:Arial,sans-serif;
+    font-family:Arial;
     background:#f0f2f5;
     margin:0;
-    padding:0;
 }
 
 .container{
     width:95%;
     margin:30px auto;
     background:#fff;
-    padding:20px 25px;
+    padding:20px;
     border-radius:10px;
     box-shadow:0 0 15px rgba(0,0,0,0.2);
 }
 
-h2{
-    text-align:center;
-    margin-bottom:20px;
-    color:#333;
-}
-
-/* =========================
-   BUTTON
-========================= */
+h2{text-align:center;}
 
 .btn{
-    text-decoration:none;
     padding:8px 15px;
     border-radius:5px;
-    color:white;
-    margin-right:5px;
-    font-size:14px;
+    color:#fff;
+    text-decoration:none;
     display:inline-block;
-    margin-top:5px;
+    margin:3px;
 }
 
-.btn-primary{
-    background:#28a745;
-}
-
-.btn-warning{
-    background:#ffc107;
-    color:black;
-}
-
-.btn-info{
-    background:#17a2b8;
-}
-
-.btn-dark{
-    background:#343a40;
-}
-
-.btn-secondary{
-    background:#6c757d;
-}
-
-/* =========================
-   SEARCH
-========================= */
+.btn-primary{background:#28a745;}
+.btn-warning{background:#ffc107;color:#000;}
+.btn-info{background:#17a2b8;}
+.btn-dark{background:#343a40;}
+.btn-secondary{background:#6c757d;}
 
 .search-box{
-    margin-top:20px;
-    margin-bottom:20px;
     display:flex;
     gap:10px;
+    margin:20px 0;
 }
 
-.search-box input{
-
+.search-box input,
+.search-box select{
     flex:1;
-
     padding:10px;
-
-    border:1px solid #ccc;
-
-    border-radius:5px;
 }
 
 .search-box button{
-
     padding:10px 20px;
-
-    border:none;
-
     background:#007bff;
-
     color:white;
-
-    border-radius:5px;
-
+    border:none;
     cursor:pointer;
 }
-
-/* =========================
-   TABLE
-========================= */
 
 table{
     width:100%;
     border-collapse:collapse;
-    margin-top:20px;
 }
 
-table th,
-table td{
+table th, table td{
     border:1px solid #ccc;
     padding:10px;
     text-align:center;
@@ -243,68 +173,61 @@ table th{
     color:white;
 }
 
-/* =========================
-   BADGE
-========================= */
-
 .badge{
     padding:5px 10px;
     border-radius:5px;
     color:white;
-    font-weight:bold;
     font-size:12px;
 }
 
-.badge-setor{
-    background:#28a745;
-}
-
-.badge-tarik{
-    background:#dc3545;
-}
-
-.badge-transfer{
-    background:#17a2b8;
-}
-
-/* =========================
-   PAGINATION
-========================= */
+.badge-setor{background:#28a745;}
+.badge-tarik{background:#dc3545;}
+.badge-transfer{background:#17a2b8;}
 
 .pagination{
-
     margin-top:20px;
-
     text-align:center;
 }
 
 .pagination a{
-
-    text-decoration:none;
-
     padding:8px 12px;
-
     margin:3px;
-
-    border-radius:5px;
-
     background:#007bff;
-
     color:white;
-
-    display:inline-block;
+    text-decoration:none;
+    border-radius:5px;
 }
 
 .pagination a.active{
-
     background:#28a745;
 }
-
-.pagination a:hover{
-
-    opacity:0.8;
+/* ================= BOTTOM NAV ================= */
+.bottom-nav{
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+    background:white;
+    display:flex;
+    justify-content:space-around;
+    padding:14px 0;
+    box-shadow:0 -5px 20px rgba(0,0,0,0.08);
+    border-top:1px solid #e2e8f0;
 }
 
+.bottom-nav a{
+    text-decoration:none;
+    font-size:24px;
+    color:#0284c7;
+    padding:10px 18px;
+    border-radius:14px;
+    transition:0.2s;
+}
+
+.bottom-nav a:active{
+    background:#e0f2fe;
+    transform:scale(0.95);
+}
 </style>
 
 </head>
@@ -315,229 +238,111 @@ table th{
 
 <h2>Data Transaksi</h2>
 
-<a href="tambah_transaksi.php"
-class="btn btn-primary">
+<a href="tambah_transaksi.php" class="btn btn-primary">Tambah</a>
+<a href="transfer_antar_karyawan.php" class="btn btn-info">Transfer</a>
+<a href="riwayat_transaksi.php" class="btn btn-dark">Riwayat Transaksi</a>
+<a href="riwayat_help.php" class="btn btn-dark">Riwayat E-Help</a>
+<a href="dashboard_admin.php" class="btn btn-secondary">Kembali</a>
 
-Tambah Transaksi
+<!-- SEARCH + FILTER -->
+<form method="GET" class="search-box">
 
-</a>
+<input type="text" name="cari"
+placeholder="Cari nama / tabungan / jenis..."
+value="<?= $cari; ?>">
 
-<a href="tarik_uang.php"
-class="btn btn-warning">
+<select name="jenis">
+    <option value="">Semua Jenis</option>
+    <option value="Setor" <?= ($jenis_filter=='Setor')?'selected':''; ?>>Setor</option>
+    <option value="Tarik" <?= ($jenis_filter=='Tarik')?'selected':''; ?>>Tarik</option>
+    <option value="Transfer" <?= ($jenis_filter=='Transfer')?'selected':''; ?>>Transfer</option>
+</select>
 
-Tarik Uang
-
-</a>
-
-<a href="transfer_antar_karyawan.php"
-class="btn btn-info">
-
-Transfer Antar Karyawan
-
-</a>
-
-<a href="riwayat_transaksi.php"
-class="btn btn-dark">
-
-Riwayat Transaksi
-
-</a>
-
-<a href="dashboard_admin.php"
-class="btn btn-secondary">
-
-Kembali ke Dashboard
-
-</a>
-
-<!-- =========================
-     SEARCH
-========================= -->
-
-<form method="GET"
-class="search-box">
-
-<input
-type="text"
-name="cari"
-
-placeholder="Cari nama, jenis transaksi, ID tabungan..."
-
-value="<?= $cari; ?>"
->
-
-<button type="submit">
-
-Cari
-
-</button>
+<button type="submit">Cari</button>
 
 </form>
 
 <table>
 
 <tr>
-
 <th>No</th>
 <th>ID</th>
-<th>Tabungan</th>
-<th>Jenis</th>
-<th>Jumlah</th>
-<th>Saldo Saat Ini</th>
-<th>Tanggal</th>
-
+<th>Nama Nasabah</th>
+<th>Jenis Transaksi</th>
+<th>Jumlah Nominal </th>
+<th>Saldo Sekarang</th>
+<th>Tanggal Transaksi</th>
 </tr>
 
-<?php if(mysqli_num_rows($result) > 0): ?>
+<?php if (mysqli_num_rows($result) > 0): ?>
 
-<?php while ($row = mysqli_fetch_assoc($result)) { ?>
+<?php while ($row = mysqli_fetch_assoc($result)): ?>
 
 <tr>
 
-<td>
-
-<?= $no++; ?>
-
-</td>
+<td><?= $no++; ?></td>
+<td><?= $row['id_transaksi']; ?></td>
+<td><?= $row['id_tabungan']." - ".$row['nama']; ?></td>
 
 <td>
-
-<?= $row['id_transaksi']; ?>
-
-</td>
-
-<td>
-
-<?= 
-$row['id_tabungan']
-." - ".
-$row['nama'];
-?>
-
-</td>
-
-<td>
-
-<?php 
-
-$jenis =
-strtolower($row['jenis_transaksi']);
+<?php
+$jenis = strtolower($row['jenis_transaksi']);
 
 if ($jenis == 'setor') {
-
-echo "
-<span class='badge badge-setor'>
-SETOR
-</span>
-";
-
+    echo "<span class='badge badge-setor'>SETOR</span>";
 } elseif ($jenis == 'tarik') {
-
-echo "
-<span class='badge badge-tarik'>
-TARIK
-</span>
-";
-
+    echo "<span class='badge badge-tarik'>TARIK</span>";
 } elseif ($jenis == 'transfer') {
-
-echo "
-<span class='badge badge-transfer'>
-TRANSFER
-</span>
-";
-
+    echo "<span class='badge badge-transfer'>TRANSFER</span>";
 } else {
-
-echo $row['jenis_transaksi'];
-
+    echo $row['jenis_transaksi'];
 }
-
 ?>
-
 </td>
 
-<td>
-
-Rp
-<?= number_format(
-$row['jumlah'],
-0,
-',',
-'.'
-); ?>
-
-</td>
-
-<td>
-
-Rp
-<?= number_format(
-$row['saldo'],
-0,
-',',
-'.'
-); ?>
-
-</td>
-
-<td>
-
-<?= 
-date(
-'d-m-Y H:i:s',
-strtotime($row['tanggal'])
-); 
-?>
-
-</td>
+<td>Rp <?= number_format($row['jumlah'],0,',','.'); ?></td>
+<td>Rp <?= number_format($row['saldo'],0,',','.'); ?></td>
+<td><?= date('d-m-Y H:i:s', strtotime($row['tanggal'])); ?></td>
 
 </tr>
 
-<?php } ?>
+<?php endwhile; ?>
 
 <?php else: ?>
 
 <tr>
-
-<td colspan="7">
-
-Belum ada data transaksi
-
-</td>
-
+<td colspan="7">Belum ada data transaksi</td>
 </tr>
 
 <?php endif; ?>
 
 </table>
 
-<!-- =========================
-     PAGINATION
-========================= -->
-
+<!-- PAGINATION -->
 <div class="pagination">
 
-<?php for($i = 1; $i <= $total_halaman; $i++) { ?>
+<?php for ($i = 1; $i <= $total_halaman; $i++): ?>
 
-<a
-href="?halaman=<?= $i; ?>&cari=<?= $cari; ?>"
-
-class="<?=
-($i == $halaman)
-? 'active'
-: '';
-?>"
-
->
+<a href="?halaman=<?= $i; ?>&cari=<?= $cari; ?>&jenis=<?= $jenis_filter; ?>"
+class="<?= ($i == $halaman) ? 'active' : ''; ?>">
 
 <?= $i; ?>
 
 </a>
 
-<?php } ?>
+<?php endfor; ?>
 
 </div>
+
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+
+    <a href="dashboard_admin.php">🏠</a>
+    <a href="data_transaksi.php">📊</a>
+    <a href="data_nasabah.php">👥</a>
+    <a href="logout.php">🚪</a>
 
 </div>
 

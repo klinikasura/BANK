@@ -317,6 +317,35 @@ table th{
     opacity:0.8;
 }
 
+
+/* ================= BOTTOM NAV ================= */
+.bottom-nav{
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+    background:white;
+    display:flex;
+    justify-content:space-around;
+    padding:14px 0;
+    box-shadow:0 -5px 20px rgba(0,0,0,0.08);
+    border-top:1px solid #e2e8f0;
+}
+
+.bottom-nav a{
+    text-decoration:none;
+    font-size:24px;
+    color:#0284c7;
+    padding:10px 18px;
+    border-radius:14px;
+    transition:0.2s;
+}
+
+.bottom-nav a:active{
+    background:#e0f2fe;
+    transform:scale(0.95);
+}
+
 /* =========================
    PRINT
 ========================= */
@@ -561,6 +590,21 @@ class="<?=
 <?php } ?>
 
 </div>
+
+</div>
+   <p>&nbsp;</p>
+   <p>&nbsp;</p>
+   <p>&nbsp;</p>
+   <p>&nbsp;</p>
+   <p>&nbsp;</p>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+
+    <a href="dashboard_admin.php">🏠</a>
+    <a href="data_transaksi.php">📊</a>
+    <a href="data_nasabah.php">👥</a>
+    <a href="logout.php">🚪</a>
 
 </div>
 

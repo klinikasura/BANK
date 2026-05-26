@@ -19,7 +19,7 @@ $cari = isset($_GET['cari']) ? trim($_GET['cari']) : "";
 $cari_safe = mysqli_real_escape_string($koneksi, $cari);
 
 /* =========================
-   TAMBAH DATA
+   TAMBAH
 ========================= */
 if (isset($_POST['simpan'])) {
     $nama_kelas = mysqli_real_escape_string($koneksi, $_POST['nama_kelas']);
@@ -34,7 +34,7 @@ if (isset($_POST['simpan'])) {
 }
 
 /* =========================
-   HAPUS DATA
+   HAPUS
 ========================= */
 if (isset($_GET['hapus'])) {
     $id = (int)$_GET['hapus'];
@@ -46,7 +46,7 @@ if (isset($_GET['hapus'])) {
 }
 
 /* =========================
-   UPDATE DATA
+   UPDATE
 ========================= */
 if (isset($_POST['update'])) {
     $id = (int)$_POST['id'];
@@ -63,7 +63,7 @@ if (isset($_POST['update'])) {
 }
 
 /* =========================
-   EDIT DATA
+   EDIT
 ========================= */
 $edit = false;
 $e = [];
@@ -80,242 +80,257 @@ if (isset($_GET['edit'])) {
    TOTAL DATA
 ========================= */
 $query_total = mysqli_query($koneksi, "
-    SELECT COUNT(*) as total 
-    FROM robot80_tb_kelas 
-    WHERE nama_kelas LIKE '%$cari_safe%'
+SELECT COUNT(*) as total 
+FROM robot80_tb_kelas 
+WHERE nama_kelas LIKE '%$cari_safe%'
 ");
-
-if (!$query_total) {
-    die("SQL ERROR TOTAL: " . mysqli_error($koneksi));
-}
 
 $data_total = mysqli_fetch_assoc($query_total);
 $total_data = $data_total['total'] ?? 0;
 
-$total_halaman = ($total_data > 0) ? ceil($total_data / $batas) : 1;
+$total_halaman = max(1, ceil($total_data / $batas));
 
 /* =========================
    DATA
 ========================= */
 $data = mysqli_query($koneksi, "
-    SELECT * FROM robot80_tb_kelas
-    WHERE nama_kelas LIKE '%$cari_safe%'
-    ORDER BY id DESC
-    LIMIT $mulai, $batas
+SELECT * FROM robot80_tb_kelas
+WHERE nama_kelas LIKE '%$cari_safe%'
+ORDER BY id DESC
+LIMIT $mulai, $batas
 ");
-
-if (!$data) {
-    die("SQL ERROR DATA: " . mysqli_error($koneksi));
-}
 ?>
 
 <!DOCTYPE html>
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
- <title>myROBOT-V80</title>
-  <link href="http://10.10.20.250/dashboard/APPS-ROBOT/BUILDING APLIKASI/@API-GITHUB-V80/ROBOT-GITHUB/ROBOTV80.png" rel="icon" type="image/png" />
+<title>Data Posisi</title>
 
 <style>
-body {
-    font-family: 'Segoe UI', sans-serif;
-    background: #f4f6f9;
-    margin: 0;
-    padding: 20px;
+body{
+    font-family:Segoe UI;
+    background:#f4f6f9;
+    padding:20px;
 }
 
-.container {
-    background: white;
-    padding: 20px;
-    border-radius: 14px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+.container{
+    background:#fff;
+    padding:20px;
+    border-radius:14px;
+    max-width:1000px;
+    margin:auto;
+    box-shadow:0 10px 25px rgba(0,0,0,0.08);
+}
+/* ================= BOTTOM NAV ================= */
+.bottom-nav{
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+    background:white;
+    display:flex;
+    justify-content:space-around;
+    padding:14px 0;
+    box-shadow:0 -5px 20px rgba(0,0,0,0.08);
+    border-top:1px solid #e2e8f0;
 }
 
-/* FORM */
-form {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
+.bottom-nav a{
+    text-decoration:none;
+    font-size:24px;
+    color:#0284c7;
+    padding:10px 18px;
+    border-radius:14px;
+    transition:0.2s;
 }
 
-input {
-    flex: 1;
-    padding: 11px;
-    border: 1px solid #ddd;
-    border-radius: 10px;
-    outline: none;
+.bottom-nav a:active{
+    background:#e0f2fe;
+    transform:scale(0.95);
 }
 
-input:focus {
-    border-color: #4f46e5;
-    box-shadow: 0 0 0 3px rgba(79,70,229,0.2);
+h2{margin-bottom:15px;}
+
+form{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-bottom:15px;
 }
 
-/* BUTTON */
-button {
-    padding: 11px 16px;
-    border: none;
-    background: linear-gradient(135deg,#4f46e5,#6366f1);
-    color: white;
-    border-radius: 10px;
-    cursor: pointer;
-    font-weight: 600;
+input{
+    flex:1;
+    padding:10px;
+    border:1px solid #ddd;
+    border-radius:10px;
 }
 
-button:hover {
-    transform: translateY(-2px);
+button{
+    padding:10px 14px;
+    border:none;
+    background:#4f46e5;
+    color:white;
+    border-radius:10px;
+    cursor:pointer;
 }
 
-/* TABLE */
-table {
-    width: 100%;
-    border-collapse: collapse;
-    overflow: hidden;
-    border-radius: 10px;
+table{
+    width:100%;
+    border-collapse:collapse;
 }
 
-th {
-    background: #4f46e5;
-    color: white;
-    padding: 12px;
-    text-align: left;
+th{
+    background:#4f46e5;
+    color:white;
+    padding:12px;
 }
 
-td {
-    padding: 12px;
-    border-bottom: 1px solid #eee;
+td{
+    padding:12px;
+    border-bottom:1px solid #eee;
 }
 
-tr:hover {
-    background: #f1f5ff;
+tr:hover{
+    background:#f1f5ff;
 }
 
-/* ACTION */
-a.btn {
-    padding: 6px 10px;
-    border-radius: 7px;
-    color: white;
-    text-decoration: none;
-    font-size: 12px;
-    margin-right: 5px;
+.btn{
+    padding:6px 10px;
+    border-radius:6px;
+    color:white;
+    text-decoration:none;
+    font-size:12px;
 }
 
-.edit { background: #f59e0b; }
-.hapus { background: #ef4444; }
+.edit{background:#f59e0b;}
+.hapus{background:#ef4444;}
 
-/* PAGINATION */
-.pagination a {
-    padding: 8px 12px;
-    margin-right: 5px;
-    background: #e5e7eb;
-    border-radius: 8px;
-    text-decoration: none;
+.pagination{
+    margin-top:20px;
+    text-align:center;
 }
 
-.active {
-    background: #4f46e5 !important;
-    color: white !important;
-}
-.btn-back {
-    display: inline-block;
-    margin-bottom: 15px;
-    padding: 10px 14px;
-    background: #111827;
-    color: white;
-    text-decoration: none;
-    border-radius: 10px;
-    font-weight: 600;
-    transition: 0.3s;
+.pagination a{
+    padding:8px 12px;
+    margin:3px;
+    background:#e5e7eb;
+    border-radius:8px;
+    text-decoration:none;
+    color:black;
+    display:inline-block;
 }
 
-.btn-back:hover {
-    background: #374151;
-    transform: translateY(-2px);
+.pagination a.active{
+    background:#4f46e5;
+    color:white;
+}
+
+.nav-bottom{
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+    background:white;
+    display:flex;
+    justify-content:space-around;
+    padding:12px;
+    border-top:1px solid #ddd;
 }
 </style>
-</head>
 
+</head>
 <body>
 
 <div class="container">
-<a href="dashboard_admin.php" class="btn-back">← Kembali</a>
 
-<h2>Data Kelas</h2>
-
-
+<h2>Data Posisi</h2>
 
 <!-- SEARCH -->
 <form method="GET">
-    <input type="text" name="cari" placeholder="Cari kelas..." value="<?php echo htmlspecialchars($cari); ?>">
-    <button type="submit">Cari</button>
+    <input type="text" name="cari" value="<?= htmlspecialchars($cari); ?>" placeholder="Cari...">
+    <button>Cari</button>
 </form>
 
-<!-- TAMBAH DATA -->
+<!-- TAMBAH -->
 <form method="POST">
-    <input type="text" name="nama_kelas" placeholder="Tambah kelas..." required>
-    <button type="submit" name="simpan">+ Tambah</button>
+    <input type="text" name="nama_kelas" placeholder="Tambah posisi..." required>
+    <button name="simpan">Tambah</button>
 </form>
 
-<!-- EDIT FORM -->
+<!-- EDIT -->
 <?php if ($edit): ?>
 <form method="POST">
-    <input type="hidden" name="id" value="<?php echo $e['id']; ?>">
-    <input type="text" name="nama_kelas" value="<?php echo htmlspecialchars($e['nama_kelas']); ?>" required>
-    <button type="submit" name="update">Update</button>
+    <input type="hidden" name="id" value="<?= $e['id']; ?>">
+    <input type="text" name="nama_kelas" value="<?= htmlspecialchars($e['nama_kelas']); ?>" required>
+    <button name="update">Update</button>
 </form>
-
 <?php endif; ?>
 
 <!-- TABLE -->
 <table>
 <tr>
     <th>No</th>
-    <th>Nama Kelas</th>
+    <th>Nama</th>
     <th>Aksi</th>
 </tr>
 
 <?php
 $no = $mulai + 1;
-
-if (mysqli_num_rows($data) > 0) {
-    while ($row = mysqli_fetch_assoc($data)) {
+if(mysqli_num_rows($data) > 0){
+while($row = mysqli_fetch_assoc($data)){
 ?>
 <tr>
-    <td><?php echo $no++; ?></td>
-    <td><?php echo htmlspecialchars($row['nama_kelas']); ?></td>
+    <td><?= $no++; ?></td>
+    <td><?= htmlspecialchars($row['nama_kelas']); ?></td>
     <td>
-        <a class="btn edit"
-           href="?edit=<?php echo $row['id']; ?>&cari=<?php echo urlencode($cari); ?>&halaman=<?php echo $halaman; ?>">
-           Edit
-        </a>
-
-        <a class="btn hapus"
-           href="?hapus=<?php echo $row['id']; ?>&cari=<?php echo urlencode($cari); ?>&halaman=<?php echo $halaman; ?>"
-           onclick="return confirm('Yakin hapus data ini?')">
-           Hapus
-        </a>
+        <a class="btn edit" href="?edit=<?= $row['id']; ?>&cari=<?= urlencode($cari); ?>&halaman=<?= $halaman; ?>">Edit</a>
+        <a class="btn hapus" href="?hapus=<?= $row['id']; ?>&cari=<?= urlencode($cari); ?>&halaman=<?= $halaman; ?>" onclick="return confirm('Hapus?')">Hapus</a>
     </td>
 </tr>
-<?php
-    }
-} else {
-    echo "<tr><td colspan='3' style='text-align:center;'>Data tidak ditemukan</td></tr>";
-}
-?>
+<?php }} else { ?>
+<tr><td colspan="3">Data kosong</td></tr>
+<?php } ?>
 
 </table>
 
 <!-- PAGINATION -->
-<div style="margin-top:15px;">
-<?php for ($i = 1; $i <= $total_halaman; $i++) { ?>
-    <a class="<?php if ($i == $halaman) echo 'active'; ?>"
-       href="?halaman=<?php echo $i; ?>&cari=<?php echo urlencode($cari); ?>">
-       <?php echo $i; ?>
-    </a>
+<div class="pagination">
+
+<?php if($halaman > 1){ ?>
+<a href="?halaman=<?= $halaman-1; ?>&cari=<?= urlencode($cari); ?>">Prev</a>
 <?php } ?>
+
+<?php for($i=1;$i<=$total_halaman;$i++){ ?>
+<a class="<?= ($i==$halaman)?'active':''; ?>" href="?halaman=<?= $i; ?>&cari=<?= urlencode($cari); ?>">
+<?= $i; ?>
+</a>
+<?php } ?>
+
+<?php if($halaman < $total_halaman){ ?>
+<a href="?halaman=<?= $halaman+1; ?>&cari=<?= urlencode($cari); ?>">Next</a>
+<?php } ?>
+
 </div>
 
 </div>
+
+<p>&nbsp;</p>
+   <p>&nbsp;</p>
+   <p>&nbsp;</p>
+   <p>&nbsp;</p>
+   <p>&nbsp;</p>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+
+    <a href="dashboard_admin.php">🏠</a>
+    <a href="data_transaksi.php">📊</a>
+    <a href="data_nasabah.php">👥</a>
+    <a href="logout.php">🚪</a>
+
+</div>
+
 
 </body>
 </html>
